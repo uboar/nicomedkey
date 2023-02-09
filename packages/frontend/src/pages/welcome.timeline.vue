@@ -1,24 +1,28 @@
 <template>
-<div class="civpbkhh">
-	<div ref="scroll" class="scrollbox" v-bind:class="{ scroll: isScrolling }">
-		<div v-for="note in notes" class="note">
-			<div class="content _panel">
-				<div class="body">
-					<MkA v-if="note.replyId" class="reply" :to="`/notes/${note.replyId}`"><i class="ti ti-arrow-back-up"></i></MkA>
-					<Mfm v-if="note.text" :text="note.text" :author="note.user" :i="$i"/>
-					<MkA v-if="note.renoteId" class="rp" :to="`/notes/${note.renoteId}`">RN: ...</MkA>
+	<div class="civpbkhh">
+		<div ref="scroll" class="scrollbox" v-bind:class="{ scroll: isScrolling }">
+			<div v-for="note in notes" class="note">
+				<div class="content _panel">
+					<div class="body">
+						<MkA v-if="note.replyId" class="reply" :to="`/notes/${note.replyId}`"><i class="ti ti-arrow-back-up"></i>
+						</MkA>
+						<Mfm v-if="note.text" :text="note.text" :author="note.user" :i="$i" />
+						<MkA v-if="note.renoteId" class="rp" :to="`/notes/${note.renoteId}`">RN: ...</MkA>
+					</div>
+						<MkAvatar v-if="note.user" :user="{
+							...note.user, avatarBlurhash: '#FFFFFF'
+						}" style="width:32px;height:32px;margin-top: 4px;" link/>
+					<div v-if="note.files.length > 0" class="richcontent">
+						<MkMediaList :media-list="note.files" />
+					</div>
+					<div v-if="note.poll">
+						<MkPoll :note="note" :readOnly="true" />
+					</div>
 				</div>
-				<div v-if="note.files.length > 0" class="richcontent">
-					<MkMediaList :media-list="note.files"/>
-				</div>
-				<div v-if="note.poll">
-					<MkPoll :note="note" :readOnly="true"/>
-				</div>
+				<MkReactionsViewer ref="reactionsViewer" :note="note" />
 			</div>
-			<MkReactionsViewer ref="reactionsViewer" :note="note"/>
 		</div>
 	</div>
-</div>
 </template>
 
 <script lang="ts">
@@ -26,6 +30,7 @@ import { defineComponent } from 'vue';
 import MkReactionsViewer from '@/components/MkReactionsViewer.vue';
 import MkMediaList from '@/components/MkMediaList.vue';
 import MkPoll from '@/components/MkPoll.vue';
+import MkAvatar from '@/components/global/MkAvatar.vue';
 import * as os from '@/os';
 
 export default defineComponent({
@@ -33,6 +38,7 @@ export default defineComponent({
 		MkReactionsViewer,
 		MkMediaList,
 		MkPoll,
+		MkAvatar,
 	},
 
 	data() {
@@ -45,6 +51,7 @@ export default defineComponent({
 	created() {
 		os.api('notes/featured').then(notes => {
 			this.notes = notes;
+			console.log(this.notes[0])
 		});
 	},
 
@@ -61,12 +68,15 @@ export default defineComponent({
 	0% {
 		transform: translate3d(0, 0, 0);
 	}
+
 	5% {
 		transform: translate3d(0, 0, 0);
 	}
+
 	75% {
 		transform: translate3d(0, calc(-100% + 90vh), 0);
 	}
+
 	90% {
 		transform: translate3d(0, calc(-100% + 90vh), 0);
 	}
@@ -75,21 +85,21 @@ export default defineComponent({
 .civpbkhh {
 	text-align: right;
 
-	> .scrollbox {
+	>.scrollbox {
 		&.scroll {
 			animation: scroll 45s linear infinite;
 		}
 
-		> .note {
+		>.note {
 			margin: 16px 0 16px auto;
 
-			> .content {
+			>.content {
 				padding: 16px;
 				margin: 0 0 0 auto;
 				max-width: max-content;
 				border-radius: 16px;
 
-				> .richcontent {
+				>.richcontent {
 					min-width: 250px;
 				}
 			}
