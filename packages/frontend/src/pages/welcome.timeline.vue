@@ -51,7 +51,6 @@ export default defineComponent({
 	created() {
 		os.api('notes/featured').then(notes => {
 			this.notes = notes;
-			console.log(this.notes[0])
 		});
 	},
 

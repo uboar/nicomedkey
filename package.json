@@ -1,10 +1,10 @@
 {
 	"name": "misskey",
-	"version": "13.5.6",
+	"version": "13.5.6-nmk0.1.0",
 	"codename": "nasubi",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/misskey-dev/misskey.git"
+		"url": "https://github.com/uboar/nicomedkey.git"
 	},
 	"packageManager": "pnpm@7.27.0",
 	"workspaces": [
