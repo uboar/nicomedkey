@@ -6,10 +6,10 @@
 			<div v-for="ad in ads" class="_panel _gaps_m ad">
 				<MkAd v-if="ad.url" :specify="ad"/>
 				<MkInput v-model="ad.url" type="url">
-					<template #label>URL</template>
+					<template #label>URL / 動画ID</template>
 				</MkInput>
 				<MkInput v-model="ad.imageUrl">
-					<template #label>{{ i18n.ts.imageUrl }}</template>
+					<template #label>{{ i18n.ts.imageUrl }} / 広告タイプ</template>
 				</MkInput>
 				<MkRadios v-model="ad.place">
 					<template #label>Form</template>

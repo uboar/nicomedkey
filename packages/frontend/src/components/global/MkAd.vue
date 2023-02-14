@@ -1,21 +1,32 @@
 <template>
-<div v-if="chosen && !shouldHide" :class="$style.root">
-	<div v-if="!showMenu" :class="[$style.main, $style['form_' + chosen.place]]">
-		<a :href="chosen.url" target="_blank" :class="$style.link">
-			<img :src="chosen.imageUrl" :class="$style.img">
-			<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon" class="ti ti-info-circle"></i></button>
-		</a>
-	</div>
-	<div v-else :class="$style.menu">
-		<div :class="$style.menuContainer">
-			<div>Ads by {{ host }}</div>
-			<!--<MkButton class="button" primary>{{ $ts._ad.like }}</MkButton>-->
-			<MkButton v-if="chosen.ratio !== 0" :class="$style.menuButton" @click="reduceFrequency">{{ $ts._ad.reduceFrequencyOfThisAd }}</MkButton>
-			<button class="_textButton" @click="toggleMenu">{{ $ts._ad.back }}</button>
+	<div v-if="chosen && !shouldHide" :class="$style.root">
+		<div v-if="!showMenu" :class="[$style.main, $style['form_' + chosen.place]]">
+			<div v-if="chosen.imageUrl === 'niconico'" style="margin-top: 4px">
+				<iframe height="102" :src="`https://ext.nicovideo.jp/thumb/${chosen.url}`" scrolling="no"
+					style="border:solid 1px #ccc; width: 80%;"><a href="https://www.nicovideo.jp/watch/${chosen.url}">ニコニコ動画広告</a></iframe>
+				<button class="_button" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon"
+						class="ti ti-info-circle" style="margin-left: 8px"></i></button>
+			</div>
+			<div v-else>
+				<a :href="chosen.url" target="_blank" :class="$style.link">
+					<img :src="chosen.imageUrl" :class="$style.img">
+					<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon"
+							class="ti ti-info-circle"></i></button>
+				</a>
+			</div>
+		</div>
+		<div v-else :class="$style.menu">
+			<div :class="$style.menuContainer">
+				<div>Ads by {{ host }}</div>
+				<!--<MkButton class="button" primary>{{ $ts._ad.like }}</MkButton>-->
+				<MkButton v-if="chosen.ratio !== 0" :class="$style.menuButton" @click="reduceFrequency">{{
+					$ts._ad.reduceFrequencyOfThisAd
+				}}</MkButton>
+				<button class="_textButton" @click="toggleMenu">{{ $ts._ad.back }}</button>
+			</div>
 		</div>
 	</div>
-</div>
-<div v-else></div>
+	<div v-else></div>
 </template>
 
 <script lang="ts" setup>
@@ -97,15 +108,16 @@ function reduceFrequency(): void {
 <style lang="scss" module>
 .root {
 	background-size: auto auto;
-	background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, var(--ad) 8px, var(--ad) 14px );
+	background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, var(--ad) 8px, var(--ad) 14px);
 }
 
 .main {
 	text-align: center;
 
 	&.form_square {
-		> .link,
-		> .link > .img {
+
+		>.link,
+		>.link>.img {
 			max-width: min(300px, 100%);
 			max-height: 300px;
 		}
@@ -114,8 +126,8 @@ function reduceFrequency(): void {
 	&.form_horizontal {
 		padding: 8px;
 
-		> .link,
-		> .link > .img {
+		>.link,
+		>.link>.img {
 			max-width: min(600px, 100%);
 			max-height: 80px;
 		}
@@ -124,16 +136,17 @@ function reduceFrequency(): void {
 	&.form_horizontal-big {
 		padding: 8px;
 
-		> .link,
-		> .link > .img {
+		>.link,
+		>.link>.img {
 			max-width: min(600px, 100%);
 			max-height: 250px;
 		}
 	}
 
 	&.form_vertical {
-		> .link,
-		> .link > .img {
+
+		>.link,
+		>.link>.img {
 			max-width: min(100px, 100%);
 		}
 	}
@@ -145,7 +158,7 @@ function reduceFrequency(): void {
 	vertical-align: bottom;
 
 	&:hover {
-		> .img {
+		>.img {
 			filter: contrast(120%);
 		}
 	}
