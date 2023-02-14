@@ -9,9 +9,12 @@
 						<Mfm v-if="note.text" :text="note.text" :author="note.user" :i="$i" />
 						<MkA v-if="note.renoteId" class="rp" :to="`/notes/${note.renoteId}`">RN: ...</MkA>
 					</div>
+					<div style="display: flex; align-items: center; justify-content: end; padding-top: 8px;">
+						<MkUserName :user="note.user" style="color: var(--X6)"></MkUserName>
 						<MkAvatar v-if="note.user" :user="{
 							...note.user, avatarBlurhash: '#FFFFFF'
-						}" style="width:32px;height:32px;margin-top: 4px;" link/>
+						}" style="width:32px;height:32px; margin-left: 8px;" link />
+					</div>
 					<div v-if="note.files.length > 0" class="richcontent">
 						<MkMediaList :media-list="note.files" />
 					</div>
