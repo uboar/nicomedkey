@@ -1,6 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { DataSource, In } from 'typeorm';
-import * as mfm from 'mfm-js';
+import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { NotesRepository, DriveFilesRepository } from '@/models/index.js';
 import type { Config } from '@/config.js';
@@ -74,14 +73,14 @@ export class DriveFileEntityService {
 	}
 
 	@bindThis
-	private getProxiedUrl(url: string, mode?: 'static' | 'avatar'): string | null {
+	private getProxiedUrl(url: string, mode?: 'static' | 'avatar'): string {
 		return appendQuery(
 			`${this.config.mediaProxy}/${mode ?? 'image'}.webp`,
 			query({
 				url,
 				...(mode ? { [mode]: '1' } : {}),
-			})
-		)
+			}),
+		);
 	}
 
 	@bindThis
@@ -110,7 +109,7 @@ export class DriveFileEntityService {
 	}
 
 	@bindThis
-	public getPublicUrl(file: DriveFile, mode?: 'avatar'): string | null { // static = thumbnail
+	public getPublicUrl(file: DriveFile, mode?: 'avatar'): string { // static = thumbnail
 		// リモートかつメディアプロキシ
 		if (file.uri != null && file.userHost != null && this.config.externalMediaProxyEnabled) {
 			return this.getProxiedUrl(file.uri, mode);
