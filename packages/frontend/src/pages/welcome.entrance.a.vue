@@ -1,58 +1,70 @@
 <template>
-<div v-if="meta" class="rsqzvsbo">
-	<MkFeaturedPhotos class="bg"/>
-	<XTimeline class="tl"/>
-	<div class="shape1"></div>
-	<div class="shape2"></div>
-	<img src="/client-assets/misskey.svg" class="misskey"/>
-	<div class="emojis">
-		<MkEmoji :normal="true" :no-style="true" emoji="👍"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="❤"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="😆"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="🎉"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="🍮"/>
-	</div>
-	<div class="contents">
-		<div class="main">
-			<img :src="$instance.iconUrl || $instance.faviconUrl || '/favicon.ico'" alt="" class="icon"/>
-			<button class="_button _acrylic menu" @click="showMenu"><i class="ti ti-dots"></i></button>
-			<div class="fg">
-				<h1>
-					<!-- 背景色によってはロゴが見えなくなるのでとりあえず無効に -->
-					<!-- <img class="logo" v-if="meta.logoImageUrl" :src="meta.logoImageUrl"><span v-else class="text">{{ instanceName }}</span> -->
-					<span class="text">{{ instanceName }}</span>
-				</h1>
-				<div class="about">
-					<!-- eslint-disable-next-line vue/no-v-html -->
-					<div class="desc" v-html="meta.description || i18n.ts.headlineMisskey"></div>
+	<div v-if="meta" class="rsqzvsbo">
+		<MkFeaturedPhotos class="bg" />
+		<XTimeline class="tl" />
+		<div class="shape1"></div>
+		<div class="shape2"></div>
+		<div class="misskey-parent">
+			<div class="powered-by">
+				Powered By</div>
+			<img src="/client-assets/misskey.svg" class="misskey" />
+		</div>
+		<div class="emojis">
+			<MkEmoji :normal="true" :no-style="true" emoji="👍" />
+			<MkEmoji :normal="true" :no-style="true" emoji="❤" />
+			<MkEmoji :normal="true" :no-style="true" emoji="😆" />
+			<MkEmoji :normal="true" :no-style="true" emoji="🎉" />
+			<MkEmoji :normal="true" :no-style="true" emoji="🍮" />
+		</div>
+		<div class="contents">
+			<div class="main">
+				<!-- <img v-if="isDarkMode" src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/icon_w.svg"
+					alt="" class="icon" />
+				<img v-else src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/icon_b.svg" alt=""
+					class="icon" /> -->
+				<button class="_button _acrylic menu" @click="showMenu"><i class="ti ti-dots"></i></button>
+				<div class="fg">
+					<h1>
+						<!-- 背景色によってはロゴが見えなくなるのでとりあえず無効に -->
+						<img class="logo" v-if="isDarkMode"
+							src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg">
+						<img class="logo" v-else
+							src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1.svg">
+						<!-- <span class="text">{{ instanceName }}</span> -->
+					</h1>
+					<div class="about">
+						<!-- eslint-disable-next-line vue/no-v-html -->
+						<div class="desc" v-html="meta.description || i18n.ts.headlineMisskey"></div>
+					</div>
+					<div v-if="instance.disableRegistration" class="warn">
+						<MkInfo warn>{{ i18n.ts.invitationRequiredToRegister }}</MkInfo>
+					</div>
+					<div class="action _gaps_s">
+						<MkButton full rounded gradate data-cy-signup style="margin-right: 12px;" @click="signup()">{{
+							i18n.ts.joinThisServer }}</MkButton>
+						<MkButton full rounded @click="exploreOtherServers()">{{ i18n.ts.exploreOtherServers }}</MkButton>
+						<MkButton full rounded data-cy-signin @click="signin()">{{ i18n.ts.login }}</MkButton>
+					</div>
 				</div>
-				<div v-if="instance.disableRegistration" class="warn">
-					<MkInfo warn>{{ i18n.ts.invitationRequiredToRegister }}</MkInfo>
-				</div>
-				<div class="action _gaps_s">
-					<MkButton full rounded gradate data-cy-signup style="margin-right: 12px;" @click="signup()">{{ i18n.ts.joinThisServer }}</MkButton>
-					<MkButton full rounded @click="exploreOtherServers()">{{ i18n.ts.exploreOtherServers }}</MkButton>
-					<MkButton full rounded data-cy-signin @click="signin()">{{ i18n.ts.login }}</MkButton>
+			</div>
+			<div v-if="instance.policies.ltlAvailable" class="tl">
+				<div class="title">{{ i18n.ts.letsLookAtTimeline }}</div>
+				<div class="body">
+					<MkTimeline src="local" />
 				</div>
 			</div>
 		</div>
-		<div v-if="instance.policies.ltlAvailable" class="tl">
-			<div class="title">{{ i18n.ts.letsLookAtTimeline }}</div>
-			<div class="body">
-				<MkTimeline src="local"/>
-			</div>
+		<div v-if="instances && instances.length > 0" class="federation">
+			<MarqueeText :duration="40">
+				<MkA v-for="instance in instances" :key="instance.id" :class="$style.federationInstance"
+					:to="`/instance-info/${instance.host}`" behavior="window">
+					<!--<MkInstanceCardMini :instance="instance"/>-->
+					<img v-if="instance.iconUrl" class="icon" :src="instance.iconUrl" alt="" />
+					<span class="name _monospace">{{ instance.host }}</span>
+				</MkA>
+			</MarqueeText>
 		</div>
 	</div>
-	<div v-if="instances && instances.length > 0" class="federation">
-		<MarqueeText :duration="40">
-			<MkA v-for="instance in instances" :key="instance.id" :class="$style.federationInstance" :to="`/instance-info/${instance.host}`" behavior="window">
-				<!--<MkInstanceCardMini :instance="instance"/>-->
-				<img v-if="instance.iconUrl" class="icon" :src="instance.iconUrl" alt=""/>
-				<span class="name _monospace">{{ instance.host }}</span>
-			</MkA>
-		</MarqueeText>
-	</div>
-</div>
 </template>
 
 <script lang="ts" setup>
@@ -76,7 +88,10 @@ let instances = $ref<any[]>();
 
 os.api('meta', { detail: true }).then(_meta => {
 	meta = _meta;
+	console.log(meta)
 });
+
+const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 os.apiGet('federation/instances', {
 	sort: '+pubSub',
@@ -127,7 +142,7 @@ function exploreOtherServers() {
 
 <style lang="scss" scoped>
 .rsqzvsbo {
-	> .bg {
+	>.bg {
 		position: fixed;
 		top: 0;
 		right: 0;
@@ -135,7 +150,7 @@ function exploreOtherServers() {
 		height: 100vh;
 	}
 
-	> .tl {
+	>.tl {
 		position: fixed;
 		top: 0;
 		bottom: 0;
@@ -145,15 +160,15 @@ function exploreOtherServers() {
 		width: 500px;
 		height: calc(100% - 256px);
 		overflow: hidden;
-		-webkit-mask-image: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 128px, rgba(0,0,0,1) calc(100% - 128px), rgba(0,0,0,0) 100%);
-		mask-image: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 128px, rgba(0,0,0,1) calc(100% - 128px), rgba(0,0,0,0) 100%);
+		-webkit-mask-image: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 128px, rgba(0, 0, 0, 1) calc(100% - 128px), rgba(0, 0, 0, 0) 100%);
+		mask-image: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 128px, rgba(0, 0, 0, 1) calc(100% - 128px), rgba(0, 0, 0, 0) 100%);
 
 		@media (max-width: 1200px) {
 			display: none;
 		}
 	}
 
-	> .shape1 {
+	>.shape1 {
 		position: fixed;
 		top: 0;
 		left: 0;
@@ -162,7 +177,8 @@ function exploreOtherServers() {
 		background: var(--accent);
 		clip-path: polygon(0% 0%, 45% 0%, 20% 100%, 0% 100%);
 	}
-	> .shape2 {
+
+	>.shape2 {
 		position: fixed;
 		top: 0;
 		left: 0;
@@ -173,23 +189,28 @@ function exploreOtherServers() {
 		opacity: 0.5;
 	}
 
-	> .misskey {
+	>.misskey-parent {
 		position: fixed;
-		top: 42px;
-		left: 42px;
-		width: 140px;
+		top: 36px;
+		left: 36px;
+		flex: auto;
+		color: #FFFFFF;
 
-		@media (max-width: 450px) {
-			width: 130px;
+		>.misskey {
+			width: 140px;
+
+			@media (max-width: 450px) {
+				width: 130px;
+			}
 		}
 	}
 
-	> .emojis {
+	>.emojis {
 		position: fixed;
 		bottom: 32px;
 		left: 35px;
 
-		> * {
+		>* {
 			margin-right: 8px;
 		}
 
@@ -198,7 +219,7 @@ function exploreOtherServers() {
 		}
 	}
 
-	> .contents {
+	>.contents {
 		position: relative;
 		width: min(430px, calc(100% - 32px));
 		margin-left: 128px;
@@ -208,21 +229,22 @@ function exploreOtherServers() {
 			margin: auto;
 		}
 
-		> .main {
+		>.main {
 			position: relative;
 			background: var(--panel);
 			border-radius: var(--radius);
 			box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
 			text-align: center;
-		
-			> .icon {
+
+			>.icon {
 				width: 85px;
 				margin-top: -47px;
 				border-radius: 100%;
 				vertical-align: bottom;
+				background-color: var(--panel);
 			}
 
-			> .menu {
+			>.menu {
 				position: absolute;
 				top: 16px;
 				right: 16px;
@@ -230,44 +252,45 @@ function exploreOtherServers() {
 				height: 32px;
 				border-radius: 8px;
 				font-size: 18px;
+				z-index: 50;
 			}
 
-			> .fg {
+			>.fg {
 				position: relative;
 				z-index: 1;
 
-				> h1 {
+				>h1 {
 					display: block;
 					margin: 0;
-					padding: 16px 32px 24px 32px;
+					padding: 32px 32px 24px 32px;
 					font-size: 1.4em;
 
-					> .logo {
+					>.logo {
 						vertical-align: bottom;
 						max-height: 120px;
 						max-width: min(100%, 300px);
 					}
 				}
 
-				> .about {
+				>.about {
 					padding: 0 32px;
 				}
 
-				> .warn {
+				>.warn {
 					padding: 32px 32px 0 32px;
 				}
 
-				> .action {
+				>.action {
 					padding: 32px;
 
-					> * {
+					>* {
 						line-height: 28px;
 					}
 				}
 			}
 		}
 
-		> .tl {
+		>.tl {
 			position: relative;
 			background: var(--panel);
 			border-radius: var(--radius);
@@ -275,19 +298,19 @@ function exploreOtherServers() {
 			box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
 			margin-top: 16px;
 
-			> .title {
+			>.title {
 				padding: 12px 16px;
 				border-bottom: solid 1px var(--divider);
 			}
 
-			> .body {
+			>.body {
 				height: 350px;
 				overflow: auto;
 			}
 		}
 	}
 
-	> .federation {
+	>.federation {
 		position: fixed;
 		bottom: 16px;
 		left: 0;

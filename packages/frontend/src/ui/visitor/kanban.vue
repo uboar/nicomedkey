@@ -1,40 +1,45 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-<div class="rwqkcmrc" :style="{ backgroundImage: transparent ? 'none' : `url(${ $instance.backgroundImageUrl })` }">
-	<div class="back" :class="{ transparent }"></div>
-	<div class="contents">
-		<div class="wrapper">
-			<h1 v-if="meta" :class="{ full }">
-				<MkA to="/" class="link"><img v-if="meta.logoImageUrl" class="logo" :src="meta.logoImageUrl" alt="logo"><span v-else class="text">{{ instanceName }}</span></MkA>
-			</h1>
-			<template v-if="full">
-				<div v-if="meta" class="about">
-					<div class="desc" v-html="meta.description || $ts.introMisskey"></div>
-				</div>
-				<div class="action">
-					<button class="_buttonPrimary" @click="signup()">{{ $ts.signup }}</button>
-					<button class="_button" @click="signin()">{{ $ts.login }}</button>
-				</div>
-				<div class="announcements panel">
-					<header>{{ $ts.announcements }}</header>
-					<MkPagination v-slot="{items}" :pagination="announcements" class="list">
-						<section v-for="announcement in items" :key="announcement.id" class="item">
-							<div class="title">{{ announcement.title }}</div>
-							<div class="content">
-								<Mfm :text="announcement.text"/>
-								<img v-if="announcement.imageUrl" :src="announcement.imageUrl" alt="announcement image"/>
-							</div>
-						</section>
-					</MkPagination>
-				</div>
-				<div v-if="poweredBy" class="powered-by">
-					<b><MkA to="/">{{ host }}</MkA></b>
-					<small>Powered by <a href="https://github.com/misskey-dev/misskey" target="_blank">Misskey</a></small>
-				</div>
-			</template>
+	<div class="rwqkcmrc" :style="{ backgroundImage: transparent ? 'none' : `url(${$instance.backgroundImageUrl})` }">
+		<div class="back" :class="{ transparent }"></div>
+		<div class="contents">
+			<div class="wrapper">
+				<h1 v-if="meta" :class="{ full }">
+					<!-- <MkA to="/" class="link"><img v-if="meta.logoImageUrl" class="logo" :src="meta.logoImageUrl" alt="logo"><span v-else class="text">{{ instanceName }}</span></MkA> -->
+					<MkA to="/" class="link"><img class="logo"
+							src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo2_w.svg" alt="logo">
+					</MkA>
+				</h1>
+				<template v-if="full">
+					<div v-if="meta" class="about">
+						<div class="desc" v-html="meta.description || $ts.introMisskey"></div>
+					</div>
+					<div class="action">
+						<button class="_buttonPrimary" @click="signup()">{{ $ts.signup }}</button>
+						<button class="_button" @click="signin()">{{ $ts.login }}</button>
+					</div>
+					<div class="announcements panel">
+						<header>{{ $ts.announcements }}</header>
+						<MkPagination v-slot="{ items }" :pagination="announcements" class="list">
+							<section v-for="announcement in items" :key="announcement.id" class="item">
+								<div class="title">{{ announcement.title }}</div>
+								<div class="content">
+									<Mfm :text="announcement.text" />
+									<img v-if="announcement.imageUrl" :src="announcement.imageUrl" alt="announcement image" />
+								</div>
+							</section>
+						</MkPagination>
+					</div>
+					<div v-if="poweredBy" class="powered-by">
+						<b>
+							<MkA to="/">{{ host }}</MkA>
+						</b>
+						<small>Powered by <a href="https://github.com/misskey-dev/misskey" target="_blank">Misskey</a></small>
+					</div>
+				</template>
+			</div>
 		</div>
 	</div>
-</div>
 </template>
 
 <script lang="ts">
@@ -114,7 +119,11 @@ export default defineComponent({
 	background-size: cover;
 	// TODO: パララックスにしたい
 
-	> .back {
+	.logo {
+		filter: drop-shadow(0 0 8px #333333);
+	}
+
+	>.back {
 		position: absolute;
 		top: 0;
 		left: 0;
@@ -128,30 +137,31 @@ export default defineComponent({
 		}
 	}
 
-	> .contents {
+	>.contents {
 		position: relative;
 		z-index: 1;
 		height: inherit;
 		overflow: auto;
 
-		> .wrapper {
+		>.wrapper {
 			max-width: 380px;
 			padding: 0 16px;
 			box-sizing: border-box;
 			margin: 0 auto;
 
-			> .panel {
+			>.panel {
 				-webkit-backdrop-filter: var(--blur, blur(8px));
 				backdrop-filter: var(--blur, blur(8px));
 				background: rgba(0, 0, 0, 0.5);
 				border-radius: var(--radius);
 
-				&, * {
+				&,
+				* {
 					color: #fff !important;
 				}
 			}
 
-			> h1 {
+			>h1 {
 				display: block;
 				margin: 0;
 				padding: 32px 0 32px 0;
@@ -160,14 +170,14 @@ export default defineComponent({
 				&.full {
 					padding: 64px 0 0 0;
 
-					> .link {
+					>.link {
 						> ::v-deep(.logo) {
 							max-height: 130px;
 						}
 					}
 				}
 
-				> .link {
+				>.link {
 					display: block;
 
 					> ::v-deep(.logo) {
@@ -177,7 +187,7 @@ export default defineComponent({
 				}
 			}
 
-			> .about {
+			>.about {
 				display: block;
 				margin: 24px 0;
 				text-align: center;
@@ -186,8 +196,8 @@ export default defineComponent({
 				color: #fff;
 			}
 
-			> .action {
-				> button {
+			>.action {
+				>button {
 					display: block;
 					width: 100%;
 					padding: 10px;
@@ -205,32 +215,32 @@ export default defineComponent({
 				}
 			}
 
-			> .announcements {
+			>.announcements {
 				margin: 32px 0;
 				text-align: left;
 
-				> header {
+				>header {
 					padding: 12px 16px;
 					border-bottom: solid 1px rgba(255, 255, 255, 0.5);
 				}
 
-				> .list {
+				>.list {
 					max-height: 300px;
 					overflow: auto;
 
-					> .item {
+					>.item {
 						padding: 12px 16px;
 
-						& + .item {
+						&+.item {
 							border-top: solid 1px rgba(255, 255, 255, 0.5);
 						}
 
-						> .title {
+						>.title {
 							font-weight: bold;
 						}
 
-						> .content {
-							> img {
+						>.content {
+							>img {
 								max-width: 100%;
 							}
 						}
@@ -238,14 +248,14 @@ export default defineComponent({
 				}
 			}
 
-			> .powered-by {
+			>.powered-by {
 				padding: 28px;
 				font-size: 14px;
 				text-align: center;
 				border-top: 1px solid rgba(255, 255, 255, 0.5);
 				color: #fff;
 
-				> small {
+				>small {
 					display: block;
 					margin-top: 8px;
 					opacity: 0.5;
@@ -253,5 +263,4 @@ export default defineComponent({
 			}
 		}
 	}
-}
-</style>
+}</style>

@@ -1,25 +1,35 @@
 <template>
-<div ref="el" class="hiyeyicy" :class="{ wide: !narrow }">
-	<div v-if="!narrow || currentPage?.route.name == null" class="nav">	
-		<MkSpacer :content-max="700" :margin-min="16">
-			<div class="lxpfedzu">
-				<div class="banner">
-					<img :src="$instance.iconUrl || '/favicon.ico'" alt="" class="icon"/>
+	<div ref="el" class="hiyeyicy" :class="{ wide: !narrow }">
+		<div v-if="!narrow || currentPage?.route.name == null" class="nav">
+			<MkSpacer :content-max="700" :margin-min="16">
+				<div class="lxpfedzu">
+					<div class="banner">
+						<!-- <img :src="$instance.iconUrl || '/favicon.ico'" alt="" class="icon"/> -->
+						<img src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""
+							class="icon" />
+					</div>
+
+					<MkInfo v-if="thereIsUnresolvedAbuseReport" warn class="info">{{ i18n.ts.thereIsUnresolvedAbuseReportWarning }}
+						<MkA to="/admin/abuses" class="_link">{{ i18n.ts.check }}</MkA>
+					</MkInfo>
+					<MkInfo v-if="noMaintainerInformation" warn class="info">{{ i18n.ts.noMaintainerInformationWarning }} <MkA
+							to="/admin/settings" class="_link">{{ i18n.ts.configure }}</MkA>
+					</MkInfo>
+					<MkInfo v-if="noBotProtection" warn class="info">{{ i18n.ts.noBotProtectionWarning }} <MkA to="/admin/security"
+							class="_link">{{ i18n.ts.configure }}</MkA>
+					</MkInfo>
+					<MkInfo v-if="noEmailServer" warn class="info">{{ i18n.ts.noEmailServerWarning }} <MkA
+							to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA>
+					</MkInfo>
+
+					<MkSuperMenu :def="menuDef" :grid="currentPage?.route.name == null"></MkSuperMenu>
 				</div>
-
-				<MkInfo v-if="thereIsUnresolvedAbuseReport" warn class="info">{{ i18n.ts.thereIsUnresolvedAbuseReportWarning }} <MkA to="/admin/abuses" class="_link">{{ i18n.ts.check }}</MkA></MkInfo>
-				<MkInfo v-if="noMaintainerInformation" warn class="info">{{ i18n.ts.noMaintainerInformationWarning }} <MkA to="/admin/settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-				<MkInfo v-if="noBotProtection" warn class="info">{{ i18n.ts.noBotProtectionWarning }} <MkA to="/admin/security" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-				<MkInfo v-if="noEmailServer" warn class="info">{{ i18n.ts.noEmailServerWarning }} <MkA to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-
-				<MkSuperMenu :def="menuDef" :grid="currentPage?.route.name == null"></MkSuperMenu>
-			</div>
-		</MkSpacer>
+			</MkSpacer>
+		</div>
+		<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
+			<RouterView />
+		</div>
 	</div>
-	<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
-		<RouterView/>
-	</div>
-</div>
 </template>
 
 <script lang="ts" setup>
@@ -278,7 +288,7 @@ defineExpose({
 		margin: 0 auto;
 		height: 100%;
 
-		> .nav {
+		>.nav {
 			width: 32%;
 			max-width: 280px;
 			box-sizing: border-box;
@@ -287,29 +297,29 @@ defineExpose({
 			height: 100%;
 		}
 
-		> .main {
+		>.main {
 			flex: 1;
 			min-width: 0;
 		}
 	}
 
-	> .nav {
+	>.nav {
 		.lxpfedzu {
-			> .info {
+			>.info {
 				margin: 16px 0;
 			}
 
-			> .banner {
+			>.banner {
 				margin: 16px;
 
-				> .icon {
+				>.icon {
 					display: block;
 					margin: auto;
 					height: 42px;
 					border-radius: 8px;
+					filter: drop-shadow(0 0 8px black);
 				}
 			}
 		}
 	}
-}
-</style>
+}</style>

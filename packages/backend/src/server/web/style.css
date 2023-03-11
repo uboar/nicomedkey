@@ -26,6 +26,8 @@ html {
 	width: 64px;
 	height: 64px;
 	pointer-events: none;
+	background: #fff;
+	border-radius: 50%;
 }
 
 #splashSpinner {
