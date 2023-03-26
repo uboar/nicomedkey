@@ -93,7 +93,7 @@ const choseAd = (): Ad | null => {
 };
 
 const chosen = ref(choseAd());
-const shouldHide = $ref($i && $i.policies.canHideAds);
+const shouldHide = $ref($i && $i.policies.canHideAds && (props.specify == null));
 
 function reduceFrequency(): void {
 	if (chosen.value == null) return;

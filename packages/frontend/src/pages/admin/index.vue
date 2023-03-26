@@ -22,18 +22,17 @@
 							to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA>
 					</MkInfo>
 
-					<MkSuperMenu :def="menuDef" :grid="currentPage?.route.name == null"></MkSuperMenu>
-				</div>
-			</MkSpacer>
-		</div>
-		<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
-			<RouterView />
-		</div>
+				<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
+			</div>
+		</MkSpacer>
+	</div>
+	<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
+		<RouterView/>
 	</div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, provide, watch } from 'vue';
+import { onActivated, onMounted, onUnmounted, provide, watch } from 'vue';
 import { i18n } from '@/i18n';
 import MkSuperMenu from '@/components/MkSuperMenu.vue';
 import MkInfo from '@/components/MkInfo.vue';
@@ -154,6 +153,11 @@ const menuDef = $computed(() => [{
 		to: '/admin/settings',
 		active: currentPage?.route.name === 'settings',
 	}, {
+		icon: 'ti ti-shield',
+		text: i18n.ts.moderation,
+		to: '/admin/moderation',
+		active: currentPage?.route.name === 'moderation',
+	}, {
 		icon: 'ti ti-mail',
 		text: i18n.ts.emailServer,
 		to: '/admin/email-settings',
@@ -214,8 +218,21 @@ onMounted(() => {
 	}
 });
 
+onActivated(() => {
+	narrow = el.offsetWidth < NARROW_THRESHOLD;
+	if (currentPage?.route.name == null && !narrow) {
+		router.push('/admin/overview');
+	}
+});
+
 onUnmounted(() => {
 	ro.disconnect();
+});
+
+watch(router.currentRef, (to) => {
+	if (to.route.path === "/admin" && to.child?.route.name == null && !narrow) {
+		router.replace('/admin/overview');
+	}
 });
 
 provideMetadataReceiver((info) => {
