@@ -22,12 +22,13 @@
 							to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA>
 					</MkInfo>
 
-				<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
-			</div>
-		</MkSpacer>
+					<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
+				</div>
+			</MkSpacer>
+		</div>
 	</div>
 	<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
-		<RouterView/>
+		<RouterView />
 	</div>
 </template>
 
@@ -339,4 +340,5 @@ defineExpose({
 			}
 		}
 	}
-}</style>
+}
+</style>
