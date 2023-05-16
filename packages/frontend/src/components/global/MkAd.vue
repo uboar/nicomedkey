@@ -1,36 +1,32 @@
 <template>
-	<div v-if="chosen && !shouldHide" :class="$style.root">
-		<div v-if="!showMenu" :class="[$style.main, $style['form_' + chosen.place]]">
-			<div v-if="chosen.imageUrl === 'niconico'" style="margin-top: 4px">
-				<iframe height="102" :src="`https://ext.nicovideo.jp/thumb/${chosen.url}`" scrolling="no"
-					style="border:solid 1px #ccc; width: 80%;"><a href="https://www.nicovideo.jp/watch/${chosen.url}">ニコニコ動画広告</a></iframe>
-				<button class="_button" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon"
-						class="ti ti-info-circle" style="margin-left: 8px"></i></button>
-			</div>
-			<div v-else>
-				<a :href="chosen.url" target="_blank" :class="$style.link">
-					<img :src="chosen.imageUrl" :class="$style.img">
-					<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon"
-							class="ti ti-info-circle"></i></button>
-				</a>
-			</div>
+<div v-if="chosen && !shouldHide" :class="$style.root">
+	<div v-if="!showMenu" :class="[$style.main, $style['form_' + chosen.place]]">
+		<div v-if="chosen.imageUrl === 'niconico'" style="margin-top: 4px">
+			<iframe height="102" :src="`https://ext.nicovideo.jp/thumb/${chosen.url}`" scrolling="no"
+				style="border:solid 1px #ccc; width: 80%;"><a href="https://www.nicovideo.jp/watch/${chosen.url}">ニコニコ動画広告</a></iframe>
+			<button class="_button" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon"
+				class="ti ti-info-circle" style="margin-left: 8px"></i></button>
 		</div>
-		<div v-else :class="$style.menu">
-			<div :class="$style.menuContainer">
-				<div>Ads by {{ host }}</div>
-				<!--<MkButton class="button" primary>{{ $ts._ad.like }}</MkButton>-->
-				<MkButton v-if="chosen.ratio !== 0" :class="$style.menuButton" @click="reduceFrequency">{{
-					$ts._ad.reduceFrequencyOfThisAd
-				}}</MkButton>
-				<button class="_textButton" @click="toggleMenu">{{ $ts._ad.back }}</button>
-			</div>
+		<a v-else :href="chosen.url" target="_blank" :class="$style.link">
+			<img :src="chosen.imageUrl" :class="$style.img">
+			<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon" class="ti ti-info-circle"></i></button>
+		</a>
+	</div>
+	<div v-else :class="$style.menu">
+		<div :class="$style.menuContainer">
+			<div>Ads by {{ host }}</div>
+			<!--<MkButton class="button" primary>{{ i18n.ts._ad.like }}</MkButton>-->
+			<MkButton v-if="chosen.ratio !== 0" :class="$style.menuButton" @click="reduceFrequency">{{ i18n.ts._ad.reduceFrequencyOfThisAd }}</MkButton>
+			<button class="_textButton" @click="toggleMenu">{{ i18n.ts._ad.back }}</button>
 		</div>
 	</div>
-	<div v-else></div>
+</div>
+<div v-else></div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue';
+import { i18n } from '@/i18n';
 import { instance } from '@/instance';
 import { host } from '@/config';
 import MkButton from '@/components/MkButton.vue';
@@ -93,7 +89,7 @@ const choseAd = (): Ad | null => {
 };
 
 const chosen = ref(choseAd());
-const shouldHide = $ref($i && $i.policies.canHideAds && (props.specify == null));
+const shouldHide = $ref(!defaultStore.state.forceShowAds && $i && $i.policies.canHideAds && (props.specify == null));
 
 function reduceFrequency(): void {
 	if (chosen.value == null) return;

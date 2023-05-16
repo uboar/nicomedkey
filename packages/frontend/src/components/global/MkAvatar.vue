@@ -1,15 +1,19 @@
 <template>
-<component :is="link ? MkA : 'span'" v-user-preview="preview ? user.id : undefined" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.cat]: user.isCat, [$style.square]: squareAvatars }]" :style="{ color }" :title="acct(user)" @click="onClick">
+<component :is="link ? MkA : 'span'" v-user-preview="preview ? user.id : undefined" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.animation]: animation, [$style.cat]: user.isCat, [$style.square]: squareAvatars }]" :style="{ color }" :title="acct(user)" @click="onClick">
 	<img :class="$style.inner" :src="url" decoding="async"/>
 	<MkUserOnlineIndicator v-if="indicator" :class="$style.indicator" :user="user"/>
-	<div v-if="user.isCat" :class="[$style.ears, { [$style.mask]: useBlurEffect }]">
+	<div v-if="user.isCat" :class="[$style.ears]">
 		<div :class="$style.earLeft">
-			<div v-if="useBlurEffect" :class="$style.layer">
+			<div v-if="false" :class="$style.layer">
+				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
+				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
 				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
 			</div>
 		</div>
 		<div :class="$style.earRight">
-			<div v-if="useBlurEffect" :class="$style.layer">
+			<div v-if="false" :class="$style.layer">
+				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
+				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
 				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
 			</div>
 		</div>
@@ -27,6 +31,7 @@ import { acct, userPage } from '@/filters/user';
 import MkUserOnlineIndicator from '@/components/MkUserOnlineIndicator.vue';
 import { defaultStore } from '@/store';
 
+const animation = $ref(defaultStore.state.animation);
 const squareAvatars = $ref(defaultStore.state.squareAvatars);
 const useBlurEffect = $ref(defaultStore.state.useBlurEffect);
 
@@ -86,6 +91,18 @@ watch(() => props.user.avatarBlurhash, () => {
 	to { transform: rotate(-37.6deg) skew(-30deg); }
 }
 
+@keyframes eartightleft {
+	from { transform: rotate(37.6deg) skew(30deg); }
+	50% { transform: rotate(37.4deg) skew(30deg); }
+	to { transform: rotate(37.6deg) skew(30deg); }
+}
+
+@keyframes eartightright {
+	from { transform: rotate(-37.6deg) skew(-30deg); }
+	50% { transform: rotate(-37.4deg) skew(-30deg); }
+	to { transform: rotate(-37.6deg) skew(-30deg); }
+}
+
 .root {
 	position: relative;
 	display: inline-block;
@@ -135,16 +152,7 @@ watch(() => props.user.avatarBlurhash, () => {
 		width: 100%;
 		height: 100%;
 		padding: 50%;
-
-		&.mask {
-			-webkit-mask:
-				url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><filter id="a"><feGaussianBlur in="SourceGraphic" stdDeviation="1"/></filter><circle cx="16" cy="16" r="15" filter="url(%23a)"/></svg>') center / 50% 50%,
-				linear-gradient(#fff, #fff);
-			-webkit-mask-composite: destination-out, source-over;
-			mask:
-				url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><filter id="a"><feGaussianBlur in="SourceGraphic" stdDeviation="1"/></filter><circle cx="16" cy="16" r="15" filter="url(%23a)"/></svg>') exclude center / 50% 50%,
-				linear-gradient(#fff, #fff); // polyfill of `image(#fff)`
-		}
+		pointer-events: none;
 
 		> .earLeft,
 		> .earRight {
@@ -173,11 +181,21 @@ watch(() => props.user.avatarBlurhash, () => {
 
 				> .plot {
 					contain: strict;
+					position: absolute;
 					width: 100%;
 					height: 100%;
 					clip-path: path('M0 0H1V1H0z');
 					transform: scale(32767);
 					transform-origin: 0 0;
+					opacity: 0.5;
+
+					&:first-child {
+						opacity: 1;
+					}
+
+					&:last-child {
+						opacity: calc(1 / 3);
+					}
 				}
 			}
 		}
@@ -186,7 +204,7 @@ watch(() => props.user.avatarBlurhash, () => {
 			transform: rotate(37.5deg) skew(30deg);
 
 			&, &::after {
-				border-radius: 0 75% 75%;
+				border-radius: 25% 75% 75%;
 			}
 
 			> .layer {
@@ -199,6 +217,14 @@ watch(() => props.user.avatarBlurhash, () => {
 
 				> .plot {
 					background-position: 20% 10%; /* ~= 37.5deg */
+
+					&:first-child {
+						background-position-x: 21%;
+					}
+
+					&:last-child {
+						background-position-y: 11%;
+					}
 				}
 			}
 		}
@@ -207,7 +233,7 @@ watch(() => props.user.avatarBlurhash, () => {
 			transform: rotate(-37.5deg) skew(-30deg);
 
 			&, &::after {
-				border-radius: 75% 0 75% 75%;
+				border-radius: 75% 25% 75% 75%;
 			}
 
 			> .layer {
@@ -219,13 +245,22 @@ watch(() => props.user.avatarBlurhash, () => {
 										-38.5857864376%); /* 40 - 2 * sqrt(2) */
 
 				> .plot {
+					position: absolute;
 					background-position: 80% 10%; /* ~= 37.5deg */
+
+					&:first-child {
+						background-position-x: 79%;
+					}
+
+					&:last-child {
+						background-position-y: 11%;
+					}
 				}
 			}
 		}
 	}
 
-	&:hover {
+	&.animation:hover {
 		> .ears {
 			> .earLeft {
 				animation: earwiggleleft 1s infinite;
