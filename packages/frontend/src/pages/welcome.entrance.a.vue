@@ -54,8 +54,6 @@ os.api('meta', { detail: true }).then(_meta => {
 	console.log(meta)
 });
 
-const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
 os.apiGet('federation/instances', {
 	sort: '+pubSub',
 	limit: 20,
