@@ -4,8 +4,12 @@
 		<div :class="$style.banner" :style="{ backgroundImage: `url(${ instance.bannerUrl })` }"></div>
 		<button class="_button" :class="$style.instance" @click="openInstanceMenu">
 			<!-- <img :src="instance.iconUrl || instance.faviconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon"/> -->
-			<img src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""
-					class="logo" />
+			<img src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""		
+			style="{
+						display: inline-block;
+						width: 128px;
+						filter: drop-shadow(0 0 8px #333333);
+					}" />
 		</button>
 	</div>
 	<div :class="$style.middle">

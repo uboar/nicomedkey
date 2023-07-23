@@ -7,7 +7,11 @@
 				<!-- <img :src="instance.iconUrl || instance.faviconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon"/> -->
 				<img v-if="!iconOnly"
 					src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""
-					class="logo" />
+					style="{
+						display: inline-block;
+						width: 128px;
+						filter: drop-shadow(0 0 8px #333333);
+					}" />
 			</button>
 		</div>
 		<div :class="$style.middle">
@@ -102,6 +106,7 @@ function more(ev: MouseEvent) {
 </script>
 
 <style lang="scss" module>
+
 .root {
 	--nav-width: 250px;
 	--nav-icon-only-width: 72px;
