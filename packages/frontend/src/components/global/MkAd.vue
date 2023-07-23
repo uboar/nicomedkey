@@ -1,6 +1,12 @@
 <template>
 <div v-if="chosen && !shouldHide" :class="$style.root">
-	<div v-if="!showMenu" :class="[$style.main, $style['form_' + chosen.place]]">
+	<div v-if="!showMenu"
+	:class="[$style.main, {
+			[$style.form_square]: chosen.place === 'square',
+			[$style.form_horizontal]: chosen.place === 'horizontal',
+			[$style.form_horizontalBig]: chosen.place === 'horizontal-big',
+			[$style.form_vertical]: chosen.place === 'vertical',
+		}]">
 		<div v-if="chosen.imageUrl === 'niconico'" style="margin-top: 4px">
 			<iframe height="102" :src="`https://ext.nicovideo.jp/thumb/${chosen.url}`" scrolling="no"
 				style="border:solid 1px #ccc; width: 80%;"><a href="https://www.nicovideo.jp/watch/${chosen.url}">ニコニコ動画広告</a></iframe>
@@ -129,7 +135,7 @@ function reduceFrequency(): void {
 		}
 	}
 
-	&.form_horizontal-big {
+	&.form_horizontalBig {
 		padding: 8px;
 
 		>.link,

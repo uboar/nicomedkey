@@ -10,11 +10,11 @@
 		<img src="/client-assets/misskey.svg" class="misskey" />
 	</div>
 	<div class="emojis">
-		<MkEmoji :normal="true" :no-style="true" emoji="👍"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="❤"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="😆"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="🎉"/>
-		<MkEmoji :normal="true" :no-style="true" emoji="🍮"/>
+		<MkEmoji :normal="true" :noStyle="true" emoji="👍"/>
+		<MkEmoji :normal="true" :noStyle="true" emoji="❤"/>
+		<MkEmoji :normal="true" :noStyle="true" emoji="😆"/>
+		<MkEmoji :normal="true" :noStyle="true" emoji="🎉"/>
+		<MkEmoji :normal="true" :noStyle="true" emoji="🍮"/>
 	</div>
 	<div class="contents">
 		<MkVisitorDashboard/>

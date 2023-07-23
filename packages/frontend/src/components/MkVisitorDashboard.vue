@@ -34,7 +34,7 @@
 			<MkTimeline src="local"/>
 		</div>
 	</div>
-	<div :class="[$style.activeUsersChart, $style.panel]">
+	<div :class="$style.panel">
 		<XActiveUsersChart/>
 	</div>
 </div>
@@ -215,9 +215,5 @@ function exploreOtherServers() {
 .tlBody {
 	height: 350px;
 	overflow: auto;
-}
-
-.activeUsersChart {
-
 }
 </style>
