@@ -26,6 +26,9 @@ fluent-emojis/
 
 .pnpm-store
 
+redis-data
+postgres-data
+
 .idea/
 packages/*/.vscode/
 packages/backend/test/docker-compose.yml

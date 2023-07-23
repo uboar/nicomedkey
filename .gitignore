@@ -66,5 +66,6 @@ temp
 *.blend5
 
 redis-data
+postgres-data
 # VSCode addon
 .favorites.json
