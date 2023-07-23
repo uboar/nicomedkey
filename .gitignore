@@ -64,3 +64,5 @@ temp
 *.blend3
 *.blend4
 *.blend5
+
+redis-data
