@@ -105,6 +105,14 @@ export const soundsTypes = [
 	'noizenecio/kick_gaba5',
 	'noizenecio/kick_gaba6',
 	'noizenecio/kick_gaba7',
+	'kakenuke/a',
+	'kakenuke/b',
+	'kakenuke/c',
+	'kakenuke/d',
+	'kakenuke/e',
+	'kakenuke/f',
+	'kakenuke/g',
+	'kakenuke/h',
 ] as const;
 
 export function getAudio(file: string, useCache = true): HTMLAudioElement {
