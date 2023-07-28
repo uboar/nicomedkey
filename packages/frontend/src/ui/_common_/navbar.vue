@@ -12,6 +12,7 @@
 						width: 128px;
 						filter: drop-shadow(0 0 8px #333333);
 					}" />
+				<img v-else :src="instance.iconUrl || instance.faviconUrl || '/favicon.ico'" alt="" :class="$style.instanceIcon" style="background-color: #FFFFFF; border-radius: 100%;"/>
 			</button>
 		</div>
 		<div :class="$style.middle">
