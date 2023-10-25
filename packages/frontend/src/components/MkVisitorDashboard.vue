@@ -9,7 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<button class="_button _acrylic" style="z-index: 100;" :class="$style.mainMenu" @click="showMenu"><i class="ti ti-dots"></i></button>
 		<div :class="$style.mainFg">
 			<div :class="$style.mainAbout">
-				<img style="margin-top: 3rem;" :src="(isDarkMode) ? 'https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg' : 'https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1.svg'"/>
+				<img style="margin-top: 3rem;
+					display: inline-block;
+					filter: drop-shadow(0 0 2px rgb(255, 255, 255, 0.4));" :src="(isDarkMode) ? 'https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg' : 'https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1.svg'"/>
 				<!-- eslint-disable-next-line vue/no-v-html -->
 				<div v-html="meta.description || i18n.ts.headlineMisskey"></div>
 			</div>

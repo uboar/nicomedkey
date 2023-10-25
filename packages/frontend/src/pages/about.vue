@@ -12,7 +12,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div style="overflow: clip;">
 					<!-- <img :src="instance.iconUrl ?? instance.faviconUrl ?? '/favicon.ico'" alt="" :class="$style.bannerIcon"/> -->
 					<img src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""
-							class="icon" />
+						style="{
+									background-color: #333333;
+									display: inline-block;
+									filter: drop-shadow(0 0 8px #333333);
+								}" />
 					<div :class="$style.bannerName">
 						<b>{{ instance.name ?? host }}</b>
 					</div>

@@ -8,11 +8,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="!narrow || currentPage?.route.name == null" class="nav">
 		<MkSpacer :contentMax="700" :marginMin="16">
 			<div class="lxpfedzu">
-				<div class="banner">
-					<!-- <img :src="$instance.iconUrl || '/favicon.ico'" alt="" class="icon"/> -->
+				<!-- <div class="banner">
+					<img :src="$instance.iconUrl || '/favicon.ico'" alt="" class="icon"/>
 					<img src="https://s3.ap-northeast-1.wasabisys.com/s3.nicomedkey.cc/public/nicomedkey/logo1_w.svg" alt=""
 						class="icon" />
-				</div>
+				</div> -->
 
 					<MkInfo v-if="thereIsUnresolvedAbuseReport" warn class="info">{{ i18n.ts.thereIsUnresolvedAbuseReportWarning }}
 						<MkA to="/admin/abuses" class="_link">{{ i18n.ts.check }}</MkA>
