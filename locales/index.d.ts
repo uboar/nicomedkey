@@ -25,7 +25,7 @@ export interface Locale extends ILocale {
      */
     "introMisskey": string;
     /**
-     * {name}は、オープンソースのプラットフォーム<b>Misskey</b>のサーバーのひとつです。
+     * {name}は、オープンソースのプラットフォーム<b>Misskey</b>のサーバーのひとつです。nicomedkey.cc向けに一部独自の改修を行っています。
      */
     "poweredByMisskeyDescription": ParameterizedString<"name">;
     /**
