@@ -3,13 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets, In } from 'typeorm';
+import { In } from 'typeorm';
 import * as Redis from 'ioredis';
 import { Inject, Injectable } from '@nestjs/common';
 import type { NotesRepository } from '@/models/_.js';
-import { obsoleteNotificationTypes, notificationTypes, FilterUnionByProperty } from '@/types.js';
+import {
+	obsoleteNotificationTypes,
+	groupedNotificationTypes,
+	FilterUnionByProperty,
+	notificationTypes,
+} from '@/types.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteReadService } from '@/core/NoteReadService.js';
 import { NotificationEntityService } from '@/core/entities/NotificationEntityService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import { DI } from '@/di-symbols.js';
@@ -63,13 +67,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.redis)
 		private redisClient: Redis.Redis,
 
-		@Inject(DI.notesRepository)
-		private notesRepository: NotesRepository,
-
 		private idService: IdService,
 		private notificationEntityService: NotificationEntityService,
 		private notificationService: NotificationService,
-		private noteReadService: NoteReadService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const EXTRA_LIMIT = 100;
@@ -83,27 +83,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return [];
 			}
 
-			const includeTypes = ps.includeTypes && ps.includeTypes.filter(type => !(obsoleteNotificationTypes).includes(type as any)) as typeof notificationTypes[number][];
-			const excludeTypes = ps.excludeTypes && ps.excludeTypes.filter(type => !(obsoleteNotificationTypes).includes(type as any)) as typeof notificationTypes[number][];
+			const includeTypes = ps.includeTypes && ps.includeTypes.filter(type => !(obsoleteNotificationTypes).includes(type as any)) as typeof groupedNotificationTypes[number][];
+			const excludeTypes = ps.excludeTypes && ps.excludeTypes.filter(type => !(obsoleteNotificationTypes).includes(type as any)) as typeof groupedNotificationTypes[number][];
 
-			const limit = (ps.limit + EXTRA_LIMIT) + (ps.untilId ? 1 : 0) + (ps.sinceId ? 1 : 0); // untilIdに指定したものも含まれるため+1
-			const notificationsRes = await this.redisClient.xrevrange(
-				`notificationTimeline:${me.id}`,
-				ps.untilId ? this.idService.parse(ps.untilId).date.getTime() : '+',
-				ps.sinceId ? this.idService.parse(ps.sinceId).date.getTime() : '-',
-				'COUNT', limit);
-
-			if (notificationsRes.length === 0) {
-				return [];
-			}
-
-			let notifications = notificationsRes.map(x => JSON.parse(x[1][1])).filter(x => x.id !== ps.untilId && x !== ps.sinceId) as MiNotification[];
-
-			if (includeTypes && includeTypes.length > 0) {
-				notifications = notifications.filter(notification => includeTypes.includes(notification.type));
-			} else if (excludeTypes && excludeTypes.length > 0) {
-				notifications = notifications.filter(notification => !excludeTypes.includes(notification.type));
-			}
+			const notifications = await this.notificationService.getNotifications(me.id, {
+				sinceId: ps.sinceId,
+				untilId: ps.untilId,
+				limit: ps.limit,
+				includeTypes,
+				excludeTypes,
+			});
 
 			if (notifications.length === 0) {
 				return [];
@@ -162,15 +151,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			groupedNotifications = groupedNotifications.slice(0, ps.limit);
-
-			const noteIds = groupedNotifications
-				.filter((notification): notification is FilterUnionByProperty<MiNotification, 'type', 'mention' | 'reply' | 'quote'> => ['mention', 'reply', 'quote'].includes(notification.type))
-				.map(notification => notification.noteId!);
-
-			if (noteIds.length > 0) {
-				const notes = await this.notesRepository.findBy({ id: In(noteIds) });
-				this.noteReadService.read(me.id, notes);
-			}
 
 			return await this.notificationEntityService.packGroupedMany(groupedNotifications, me.id);
 		});

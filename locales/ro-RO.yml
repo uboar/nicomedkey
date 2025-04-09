@@ -254,7 +254,6 @@ removeAreYouSure: "Ești sigur că vrei să înlături {x}?"
 deleteAreYouSure: "Ești sigur că vrei să ștergi {x}?"
 resetAreYouSure: "Sigur vrei să resetezi?"
 saved: "Salvat"
-messaging: "Chat"
 upload: "Încarcă"
 keepOriginalUploading: "Păstrează imaginea originală"
 keepOriginalUploadingDescription: "Salvează imaginea originala încărcată fără modificări. Dacă e oprită, o versiune pentru afișarea pe web va fi generată la încărcare."
@@ -267,7 +266,6 @@ uploadFromUrlMayTakeTime: "S-ar putea să ia puțin până se finalizează înc�
 explore: "Explorează"
 messageRead: "Citit"
 noMoreHistory: "Nu există mai mult istoric"
-startMessaging: "Începe un chat nou"
 nUsersRead: "citit de {n}"
 agreeTo: "Sunt de acord cu {0}"
 start: "Să începem"
@@ -341,7 +339,6 @@ enableLocalTimeline: "Activează cronologia locală"
 enableGlobalTimeline: "Activeaza cronologia globală"
 disablingTimelinesInfo: "Administratorii și Moderatorii vor avea mereu access la toate cronologiile, chiar dacă nu sunt activate."
 registration: "Inregistrare"
-enableRegistration: "Activează înregistrările pentru utilizatori noi"
 invite: "Invită"
 driveCapacityPerLocalAccount: "Capacitatea Drive-ului per utilizator local"
 driveCapacityPerRemoteAccount: "Capacitatea Drive-ului per utilizator extern"
@@ -430,8 +427,6 @@ retype: "Introdu din nou"
 noteOf: "Notă de {user}"
 quoteAttached: "Citat"
 quoteQuestion: "Vrei să adaugi ca citat?"
-noMessagesYet: "Niciun mesaj încă"
-newMessageExists: "Ai mesaje noi"
 onlyOneFileCanBeAttached: "Poți atașa un singur fișier la un mesaj"
 signinRequired: "Te rog autentifică-te"
 invitations: "Invită"
@@ -453,7 +448,6 @@ or: "Sau"
 language: "Limbă"
 uiLanguage: "Limba interfeței"
 aboutX: "Despre {x}"
-disableDrawer: "Nu folosi meniuri în stil sertar"
 noHistory: "Nu există istoric"
 signinHistory: "Istoric autentificări"
 doing: "Se procesează..."
@@ -626,10 +620,7 @@ abuseReported: "Raportul tău a fost trimis. Mulțumim."
 reporter: "Raportorul"
 reporteeOrigin: "Originea raportatului"
 reporterOrigin: "Originea raportorului"
-forwardReport: "Redirecționează raportul către instanța externă"
-forwardReportIsAnonymous: "În locul contului tău, va fi afișat un cont anonim, de sistem, ca raportor către instanța externă."
 send: "Trimite"
-abuseMarkAsResolved: "Marchează raportul ca rezolvat"
 openInNewTab: "Deschide în tab nou"
 openInSideView: "Deschide în vedere laterală"
 defaultNavigationBehaviour: "Comportament de navigare implicit"
@@ -651,6 +642,17 @@ show: "Arată"
 icon: "Avatar"
 replies: "Răspunde"
 renotes: "Re-notează"
+information: "Despre"
+_chat:
+  invitations: "Invită"
+  noHistory: "Nu există istoric"
+  members: "Membri"
+  home: "Acasă"
+  send: "Trimite"
+_delivery:
+  stop: "Suspendat"
+  _type:
+    none: "Publicare"
 _role:
   _priority:
     middle: "Mediu"
@@ -711,6 +713,7 @@ _notification:
     renote: "Re-notează"
     quote: "Citează"
     reaction: "Reacție"
+    login: "Autentifică-te"
   _actions:
     reply: "Răspunde"
     renote: "Re-notează"
@@ -724,9 +727,17 @@ _deck:
     mentions: "Mențiuni"
 _webhookSettings:
   name: "Nume"
+_abuseReport:
+  _notificationRecipient:
+    _recipientType:
+      mail: "Email"
 _moderationLogTypes:
   suspend: "Suspendă"
   resetPassword: "Resetează parola"
 _reversi:
   total: "Total"
-
+_remoteLookupErrors:
+  _noSuchObject:
+    title: "Nu a fost găsit"
+_search:
+  searchScopeAll: "Tot"

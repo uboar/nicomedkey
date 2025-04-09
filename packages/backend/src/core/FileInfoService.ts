@@ -13,12 +13,14 @@ import * as fileType from 'file-type';
 import FFmpeg from 'fluent-ffmpeg';
 import isSvg from 'is-svg';
 import probeImageSize from 'probe-image-size';
-import { type predictionType } from 'nsfwjs';
-import sharp from 'sharp';
-import { encode } from 'blurhash';
+import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
+import * as blurhash from 'blurhash';
 import { createTempDir } from '@/misc/create-temp.js';
 import { AiService } from '@/core/AiService.js';
+import { LoggerService } from '@/core/LoggerService.js';
+import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
+import type { PredictionType } from 'nsfwjs';
 
 export type FileInfo = {
 	size: number;
@@ -48,9 +50,13 @@ const TYPE_SVG = {
 
 @Injectable()
 export class FileInfoService {
+	private logger: Logger;
+
 	constructor(
 		private aiService: AiService,
+		private loggerService: LoggerService,
 	) {
+		this.logger = this.loggerService.getLogger('file-info');
 	}
 
 	/**
@@ -122,7 +128,7 @@ export class FileInfoService {
 			'image/avif',
 			'image/svg+xml',
 		].includes(type.mime)) {
-			blurhash = await this.getBlurhash(path).catch(e => {
+			blurhash = await this.getBlurhash(path, type.mime).catch(e => {
 				warnings.push(`getBlurhash failed: ${e}`);
 				return undefined;
 			});
@@ -164,7 +170,7 @@ export class FileInfoService {
 		let sensitive = false;
 		let porn = false;
 
-		function judgePrediction(result: readonly predictionType[]): [sensitive: boolean, porn: boolean] {
+		function judgePrediction(result: readonly PredictionType[]): [sensitive: boolean, porn: boolean] {
 			let sensitive = false;
 			let porn = false;
 
@@ -262,7 +268,6 @@ export class FileInfoService {
 	private async *asyncIterateFrames(cwd: string, command: FFmpeg.FfmpegCommand): AsyncGenerator<string, void> {
 		const watcher = new FSWatcher({
 			cwd,
-			disableGlobbing: true,
 		});
 		let finished = false;
 		command.once('end', () => {
@@ -317,6 +322,34 @@ export class FileInfoService {
 	}
 
 	/**
+	 * ビデオファイルにビデオトラックがあるかどうかチェック
+	 * （ない場合：m4a, webmなど）
+	 *
+	 * @param path ファイルパス
+	 * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
+	 */
+	@bindThis
+	private hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
+		const sublogger = this.logger.createSubLogger('ffprobe');
+		sublogger.info(`Checking the video file. File path: ${path}`);
+		return new Promise((resolve) => {
+			try {
+				FFmpeg.ffprobe(path, (err, metadata) => {
+					if (err) {
+						sublogger.warn(`Could not check the video file. Returns true. File path: ${path}`, err);
+						resolve(true);
+						return;
+					}
+					resolve(metadata.streams.some((stream) => stream.codec_type === 'video'));
+				});
+			} catch (err) {
+				sublogger.warn(`Could not check the video file. Returns true. File path: ${path}`, err as Error);
+				resolve(true);
+			}
+		});
+	}
+
+	/**
 	 * Detect MIME Type and extension
 	 */
 	@bindThis
@@ -336,6 +369,20 @@ export class FileInfoService {
 		// XMLはSVGかもしれない
 			if (type.mime === 'application/xml' && await this.checkSvg(path)) {
 				return TYPE_SVG;
+			}
+
+			if ((type.mime.startsWith('video') || type.mime === 'application/ogg') && !(await this.hasVideoTrackOnVideoFile(path))) {
+				const newMime = `audio/${type.mime.split('/')[1]}`;
+				if (newMime === 'audio/mp4') {
+					return {
+						mime: 'audio/mp4',
+						ext: 'm4a',
+					};
+				}
+				return {
+					mime: newMime,
+					ext: type.ext,
+				};
 			}
 
 			return {
@@ -404,12 +451,12 @@ export class FileInfoService {
 	}
 
 	/**
-	 * Calculate average color of image
+	 * Calculate blurhash string of image
 	 */
 	@bindThis
-	private getBlurhash(path: string): Promise<string> {
-		return new Promise((resolve, reject) => {
-			sharp(path)
+	private getBlurhash(path: string, type: string): Promise<string> {
+		return new Promise(async (resolve, reject) => {
+			(await sharpBmp(path, type))
 				.raw()
 				.ensureAlpha()
 				.resize(64, 64, { fit: 'inside' })
@@ -419,7 +466,7 @@ export class FileInfoService {
 					let hash;
 
 					try {
-						hash = encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
+						hash = blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
 					} catch (e) {
 						return reject(e);
 					}

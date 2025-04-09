@@ -9,11 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
-import { bundledLanguagesInfo } from 'shiki';
-import type { BuiltinLanguage } from 'shiki';
-import { getHighlighter, getTheme } from '@/scripts/code-highlighter.js';
-import { defaultStore } from '@/store.js';
+import { computed, ref, watch } from 'vue';
+import { bundledLanguagesInfo } from 'shiki/langs';
+import type { BundledLanguage } from 'shiki/langs';
+import { getHighlighter, getTheme } from '@/utility/code-highlighter.js';
+import { store } from '@/store.js';
 
 const props = defineProps<{
 	code: string;
@@ -22,8 +22,8 @@ const props = defineProps<{
 }>();
 
 const highlighter = await getHighlighter();
-const darkMode = defaultStore.reactiveState.darkMode;
-const codeLang = ref<BuiltinLanguage | 'aiscript'>('js');
+const darkMode = store.r.darkMode;
+const codeLang = ref<BundledLanguage | 'aiscript'>('js');
 
 const [lightThemeName, darkThemeName] = await Promise.all([
 	getTheme('light', true),
@@ -42,7 +42,7 @@ const html = computed(() => highlighter.codeToHtml(props.code, {
 }));
 
 async function fetchLanguage(to: string): Promise<void> {
-	const language = to as BuiltinLanguage;
+	const language = to as BundledLanguage;
 
 	// Check for the loaded languages, and load the language if it's not loaded yet.
 	if (!highlighter.getLoadedLanguages().includes(language)) {
@@ -52,7 +52,7 @@ async function fetchLanguage(to: string): Promise<void> {
 			return bundle.id === language || bundle.aliases?.includes(language);
 		});
 		if (bundles.length > 0) {
-			console.log(`Loading language: ${language}`);
+			if (_DEV_) console.log(`Loading language: ${language}`);
 			await highlighter.loadLanguage(bundles[0].import);
 			codeLang.value = language;
 		} else {
@@ -74,10 +74,8 @@ watch(() => props.lang, (to) => {
 <style module lang="scss">
 .codeBlockRoot :global(.shiki) {
 	padding: 1em;
-	margin: .5em 0;
+	margin: 0;
 	overflow: auto;
-	border-radius: 8px;
-	border: 1px solid var(--divider);
 	font-family: Consolas, Monaco, Andale Mono, Ubuntu Mono, monospace;
 
 	color: var(--shiki-fallback);

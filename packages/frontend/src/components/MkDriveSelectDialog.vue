@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, shallowRef } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import XDrive from '@/components/MkDrive.vue';
 import MkModalWindow from '@/components/MkModalWindow.vue';
@@ -39,13 +39,13 @@ withDefaults(defineProps<{
 });
 
 const emit = defineEmits<{
-	(ev: 'done', r?: Misskey.entities.DriveFile[]): void;
+	(ev: 'done', r?: Misskey.entities.DriveFile[] | Misskey.entities.DriveFolder[]): void;
 	(ev: 'closed'): void;
 }>();
 
-const dialog = shallowRef<InstanceType<typeof MkModalWindow>>();
+const dialog = useTemplateRef('dialog');
 
-const selected = ref<Misskey.entities.DriveFile[]>([]);
+const selected = ref<Misskey.entities.DriveFile[] | Misskey.entities.DriveFolder[]>([]);
 
 function ok() {
 	emit('done', selected.value);
@@ -57,7 +57,7 @@ function cancel() {
 	dialog.value?.close();
 }
 
-function onChangeSelection(files: Misskey.entities.DriveFile[]) {
-	selected.value = files;
+function onChangeSelection(v: Misskey.entities.DriveFile[] | Misskey.entities.DriveFolder[]) {
+	selected.value = v;
 }
 </script>

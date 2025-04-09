@@ -4,33 +4,30 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs"/></template>
+<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs">
 	<MkSpacer :contentMax="800">
-		<MkHorizontalSwipe v-model:tab="tab" :tabs="headerTabs">
-			<div v-if="tab === 'all'" key="all">
-				<XNotifications :class="$style.notifications" :excludeTypes="excludeTypes"/>
-			</div>
-			<div v-else-if="tab === 'mentions'" key="mention">
-				<MkNotes :pagination="mentionsPagination"/>
-			</div>
-			<div v-else-if="tab === 'directNotes'" key="directNotes">
-				<MkNotes :pagination="directNotesPagination"/>
-			</div>
-		</MkHorizontalSwipe>
+		<div v-if="tab === 'all'">
+			<XNotifications :class="$style.notifications" :excludeTypes="excludeTypes"/>
+		</div>
+		<div v-else-if="tab === 'mentions'">
+			<MkNotes :pagination="mentionsPagination"/>
+		</div>
+		<div v-else-if="tab === 'directNotes'">
+			<MkNotes :pagination="directNotesPagination"/>
+		</div>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
+import { notificationTypes } from '@@/js/const.js';
 import XNotifications from '@/components/MkNotifications.vue';
 import MkNotes from '@/components/MkNotes.vue';
 import MkHorizontalSwipe from '@/components/MkHorizontalSwipe.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import { definePageMetadata } from '@/scripts/page-metadata.js';
-import { notificationTypes } from '@/const.js';
+import { definePage } from '@/page.js';
 
 const tab = ref('all');
 const includeTypes = ref<string[] | null>(null);
@@ -52,7 +49,7 @@ const directNotesPagination = {
 function setFilter(ev) {
 	const typeItems = notificationTypes.map(t => ({
 		text: i18n.ts._notification._types[t],
-		active: includeTypes.value && includeTypes.value.includes(t),
+		active: (includeTypes.value && includeTypes.value.includes(t)) ?? false,
 		action: () => {
 			includeTypes.value = [t];
 		},
@@ -63,7 +60,7 @@ function setFilter(ev) {
 		action: () => {
 			includeTypes.value = null;
 		},
-	}, { type: 'divider' }, ...typeItems] : typeItems;
+	}, { type: 'divider' as const }, ...typeItems] : typeItems;
 	os.popupMenu(items, ev.currentTarget ?? ev.target);
 }
 
@@ -94,7 +91,7 @@ const headerTabs = computed(() => [{
 	icon: 'ti ti-mail',
 }]);
 
-definePageMetadata(() => ({
+definePage(() => ({
 	title: i18n.ts.notifications,
 	icon: 'ti ti-bell',
 }));
@@ -102,7 +99,7 @@ definePageMetadata(() => ({
 
 <style module lang="scss">
 .notifications {
-	border-radius: var(--radius);
+	border-radius: var(--MI-radius);
 	overflow: clip;
 }
 </style>

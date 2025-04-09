@@ -4,8 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
 	<MkSpacer :contentMax="800">
 		<MkPostForm
 			v-if="state === 'writing'"
@@ -26,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkButton @click="goToMisskey">{{ i18n.ts.goToMisskey }}</MkButton>
 		</div>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
@@ -37,9 +36,9 @@ import * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkPostForm from '@/components/MkPostForm.vue';
 import * as os from '@/os.js';
-import { misskeyApi } from '@/scripts/misskey-api.js';
-import { definePageMetadata } from '@/scripts/page-metadata.js';
-import { postMessageToParentWindow } from '@/scripts/post-message.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { definePage } from '@/page.js';
+import { postMessageToParentWindow } from '@/utility/post-message.js';
 import { i18n } from '@/i18n.js';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -64,7 +63,34 @@ async function init() {
 	// Googleニュース対策
 	if (text?.startsWith(`${title.value}.\n`)) noteText += text.replace(`${title.value}.\n`, '');
 	else if (text && title.value !== text) noteText += `${text}\n`;
-	if (url) noteText += `${url}`;
+	if (url) {
+		try {
+			// Normalize the URL to URL-encoded and puny-coded from with the URL constructor.
+			//
+			// It's common to use unicode characters in the URL for better visibility of URL
+			//     like: https://ja.wikipedia.org/wiki/ミスキー
+			//  or like: https://藍.moe/
+			// However, in the MFM, the unicode characters must be URL-encoded to be parsed as `url` node
+			//     like: https://ja.wikipedia.org/wiki/%E3%83%9F%E3%82%B9%E3%82%AD%E3%83%BC
+			//  or like: https://xn--931a.moe/
+			// Therefore, we need to normalize the URL to URL-encoded form.
+			//
+			// The URL constructor will parse the URL and normalize unicode characters
+			//   in the host to punycode and in the path component to URL-encoded form.
+			//   (see url.spec.whatwg.org)
+			//
+			// In addition, the current MFM renderer decodes the URL-encoded path and / punycode encoded host name so
+			//   this normalization doesn't make the visible URL ugly.
+			//   (see MkUrl.vue)
+
+			noteText += new URL(url).href;
+		} catch {
+			// fallback to original URL if the URL is invalid.
+			// note that this is extremely rare since the `url` parameter is designed to share a URL and
+			// the URL constructor will throw TypeError only if failure, which means the URL is not valid.
+			noteText += url;
+		}
+	}
 	initialText.value = noteText.trim();
 
 	if (visibility.value === 'specified') {
@@ -155,12 +181,12 @@ function close(): void {
 
 	// 閉じなければ100ms後タイムラインに
 	window.setTimeout(() => {
-		location.href = '/';
+		window.location.href = '/';
 	}, 100);
 }
 
 function goToMisskey(): void {
-	location.href = '/';
+	window.location.href = '/';
 }
 
 function onPosted(): void {
@@ -172,7 +198,7 @@ const headerActions = computed(() => []);
 
 const headerTabs = computed(() => []);
 
-definePageMetadata(() => ({
+definePage(() => ({
 	title: i18n.ts.share,
 	icon: 'ti ti-share',
 }));

@@ -17,8 +17,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onUnmounted, ref, watch } from 'vue';
-import { useWidgetPropsManager, WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
-import { GetFormResultType } from '@/scripts/form.js';
+import { useWidgetPropsManager } from './widget.js';
+import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
+import type { GetFormResultType } from '@/utility/form.js';
 
 const name = 'unixClock';
 
@@ -68,9 +69,9 @@ watch(showColon, (v) => {
 });
 
 const tick = () => {
-	const now = new Date();
-	ss.value = Math.floor(now.getTime() / 1000).toString();
-	ms.value = Math.floor(now.getTime() % 1000 / 10).toString().padStart(2, '0');
+	const now = Date.now();
+	ss.value = Math.floor(now / 1000).toString();
+	ms.value = Math.floor(now % 1000 / 10).toString().padStart(2, '0');
 	if (ss.value !== prevSec) showColon.value = true;
 	prevSec = ss.value;
 };

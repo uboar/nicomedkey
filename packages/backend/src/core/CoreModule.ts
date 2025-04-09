@@ -5,6 +5,16 @@
 
 import { Module } from '@nestjs/common';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
+import { AbuseReportService } from '@/core/AbuseReportService.js';
+import { SystemWebhookEntityService } from '@/core/entities/SystemWebhookEntityService.js';
+import {
+	AbuseReportNotificationRecipientEntityService,
+} from '@/core/entities/AbuseReportNotificationRecipientEntityService.js';
+import { AbuseReportNotificationService } from '@/core/AbuseReportNotificationService.js';
+import { SystemWebhookService } from '@/core/SystemWebhookService.js';
+import { UserSearchService } from '@/core/UserSearchService.js';
+import { WebhookTestService } from '@/core/WebhookTestService.js';
+import { FlashService } from '@/core/FlashService.js';
 import { AccountMoveService } from './AccountMoveService.js';
 import { AccountUpdateService } from './AccountUpdateService.js';
 import { AiService } from './AiService.js';
@@ -14,7 +24,6 @@ import { AppLockService } from './AppLockService.js';
 import { AchievementService } from './AchievementService.js';
 import { AvatarDecorationService } from './AvatarDecorationService.js';
 import { CaptchaService } from './CaptchaService.js';
-import { CreateSystemUserService } from './CreateSystemUserService.js';
 import { CustomEmojiService } from './CustomEmojiService.js';
 import { DeleteAccountService } from './DeleteAccountService.js';
 import { DownloadService } from './DownloadService.js';
@@ -27,7 +36,7 @@ import { HashtagService } from './HashtagService.js';
 import { HttpRequestService } from './HttpRequestService.js';
 import { IdService } from './IdService.js';
 import { ImageProcessingService } from './ImageProcessingService.js';
-import { InstanceActorService } from './InstanceActorService.js';
+import { SystemAccountService } from './SystemAccountService.js';
 import { InternalStorageService } from './InternalStorageService.js';
 import { MetaService } from './MetaService.js';
 import { MfmService } from './MfmService.js';
@@ -35,12 +44,12 @@ import { ModerationLogService } from './ModerationLogService.js';
 import { NoteCreateService } from './NoteCreateService.js';
 import { NoteDeleteService } from './NoteDeleteService.js';
 import { NotePiningService } from './NotePiningService.js';
-import { NoteReadService } from './NoteReadService.js';
 import { NotificationService } from './NotificationService.js';
 import { PollService } from './PollService.js';
 import { PushNotificationService } from './PushNotificationService.js';
 import { QueryService } from './QueryService.js';
 import { ReactionService } from './ReactionService.js';
+import { ReactionsBufferingService } from './ReactionsBufferingService.js';
 import { RelayService } from './RelayService.js';
 import { RoleService } from './RoleService.js';
 import { S3Service } from './S3Service.js';
@@ -53,11 +62,11 @@ import { UserFollowingService } from './UserFollowingService.js';
 import { UserKeypairService } from './UserKeypairService.js';
 import { UserListService } from './UserListService.js';
 import { UserMutingService } from './UserMutingService.js';
+import { UserRenoteMutingService } from './UserRenoteMutingService.js';
 import { UserSuspendService } from './UserSuspendService.js';
 import { UserAuthService } from './UserAuthService.js';
 import { VideoProcessingService } from './VideoProcessingService.js';
-import { WebhookService } from './WebhookService.js';
-import { ProxyAccountService } from './ProxyAccountService.js';
+import { UserWebhookService } from './UserWebhookService.js';
 import { UtilityService } from './UtilityService.js';
 import { FileInfoService } from './FileInfoService.js';
 import { SearchService } from './SearchService.js';
@@ -65,6 +74,7 @@ import { ClipService } from './ClipService.js';
 import { FeaturedService } from './FeaturedService.js';
 import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
+import { ChatService } from './ChatService.js';
 import { RegistryApiService } from './RegistryApiService.js';
 import { ReversiService } from './ReversiService.js';
 
@@ -84,11 +94,13 @@ import ApRequestChart from './chart/charts/ap-request.js';
 import { ChartManagementService } from './chart/ChartManagementService.js';
 
 import { AbuseUserReportEntityService } from './entities/AbuseUserReportEntityService.js';
+import { AnnouncementEntityService } from './entities/AnnouncementEntityService.js';
 import { AntennaEntityService } from './entities/AntennaEntityService.js';
 import { AppEntityService } from './entities/AppEntityService.js';
 import { AuthSessionEntityService } from './entities/AuthSessionEntityService.js';
 import { BlockingEntityService } from './entities/BlockingEntityService.js';
 import { ChannelEntityService } from './entities/ChannelEntityService.js';
+import { ChatEntityService } from './entities/ChatEntityService.js';
 import { ClipEntityService } from './entities/ClipEntityService.js';
 import { DriveFileEntityService } from './entities/DriveFileEntityService.js';
 import { DriveFolderEntityService } from './entities/DriveFolderEntityService.js';
@@ -116,6 +128,7 @@ import { FlashEntityService } from './entities/FlashEntityService.js';
 import { FlashLikeEntityService } from './entities/FlashLikeEntityService.js';
 import { RoleEntityService } from './entities/RoleEntityService.js';
 import { ReversiGameEntityService } from './entities/ReversiGameEntityService.js';
+import { MetaEntityService } from './entities/MetaEntityService.js';
 
 import { ApAudienceService } from './activitypub/ApAudienceService.js';
 import { ApDbResolverService } from './activitypub/ApDbResolverService.js';
@@ -126,7 +139,7 @@ import { ApMfmService } from './activitypub/ApMfmService.js';
 import { ApRendererService } from './activitypub/ApRendererService.js';
 import { ApRequestService } from './activitypub/ApRequestService.js';
 import { ApResolverService } from './activitypub/ApResolverService.js';
-import { LdSignatureService } from './activitypub/LdSignatureService.js';
+import { JsonLdService } from './activitypub/JsonLdService.js';
 import { RemoteLoggerService } from './RemoteLoggerService.js';
 import { RemoteUserResolveService } from './RemoteUserResolveService.js';
 import { WebfingerService } from './WebfingerService.js';
@@ -142,6 +155,8 @@ import type { Provider } from '@nestjs/common';
 
 //#region 文字列ベースでのinjection用(循環参照対応のため)
 const $LoggerService: Provider = { provide: 'LoggerService', useExisting: LoggerService };
+const $AbuseReportService: Provider = { provide: 'AbuseReportService', useExisting: AbuseReportService };
+const $AbuseReportNotificationService: Provider = { provide: 'AbuseReportNotificationService', useExisting: AbuseReportNotificationService };
 const $AccountMoveService: Provider = { provide: 'AccountMoveService', useExisting: AccountMoveService };
 const $AccountUpdateService: Provider = { provide: 'AccountUpdateService', useExisting: AccountUpdateService };
 const $AiService: Provider = { provide: 'AiService', useExisting: AiService };
@@ -151,7 +166,6 @@ const $AppLockService: Provider = { provide: 'AppLockService', useExisting: AppL
 const $AchievementService: Provider = { provide: 'AchievementService', useExisting: AchievementService };
 const $AvatarDecorationService: Provider = { provide: 'AvatarDecorationService', useExisting: AvatarDecorationService };
 const $CaptchaService: Provider = { provide: 'CaptchaService', useExisting: CaptchaService };
-const $CreateSystemUserService: Provider = { provide: 'CreateSystemUserService', useExisting: CreateSystemUserService };
 const $CustomEmojiService: Provider = { provide: 'CustomEmojiService', useExisting: CustomEmojiService };
 const $DeleteAccountService: Provider = { provide: 'DeleteAccountService', useExisting: DeleteAccountService };
 const $DownloadService: Provider = { provide: 'DownloadService', useExisting: DownloadService };
@@ -164,7 +178,6 @@ const $HashtagService: Provider = { provide: 'HashtagService', useExisting: Hash
 const $HttpRequestService: Provider = { provide: 'HttpRequestService', useExisting: HttpRequestService };
 const $IdService: Provider = { provide: 'IdService', useExisting: IdService };
 const $ImageProcessingService: Provider = { provide: 'ImageProcessingService', useExisting: ImageProcessingService };
-const $InstanceActorService: Provider = { provide: 'InstanceActorService', useExisting: InstanceActorService };
 const $InternalStorageService: Provider = { provide: 'InternalStorageService', useExisting: InternalStorageService };
 const $MetaService: Provider = { provide: 'MetaService', useExisting: MetaService };
 const $MfmService: Provider = { provide: 'MfmService', useExisting: MfmService };
@@ -172,13 +185,13 @@ const $ModerationLogService: Provider = { provide: 'ModerationLogService', useEx
 const $NoteCreateService: Provider = { provide: 'NoteCreateService', useExisting: NoteCreateService };
 const $NoteDeleteService: Provider = { provide: 'NoteDeleteService', useExisting: NoteDeleteService };
 const $NotePiningService: Provider = { provide: 'NotePiningService', useExisting: NotePiningService };
-const $NoteReadService: Provider = { provide: 'NoteReadService', useExisting: NoteReadService };
 const $NotificationService: Provider = { provide: 'NotificationService', useExisting: NotificationService };
 const $PollService: Provider = { provide: 'PollService', useExisting: PollService };
-const $ProxyAccountService: Provider = { provide: 'ProxyAccountService', useExisting: ProxyAccountService };
+const $SystemAccountService: Provider = { provide: 'SystemAccountService', useExisting: SystemAccountService };
 const $PushNotificationService: Provider = { provide: 'PushNotificationService', useExisting: PushNotificationService };
 const $QueryService: Provider = { provide: 'QueryService', useExisting: QueryService };
 const $ReactionService: Provider = { provide: 'ReactionService', useExisting: ReactionService };
+const $ReactionsBufferingService: Provider = { provide: 'ReactionsBufferingService', useExisting: ReactionsBufferingService };
 const $RelayService: Provider = { provide: 'RelayService', useExisting: RelayService };
 const $RoleService: Provider = { provide: 'RoleService', useExisting: RoleService };
 const $S3Service: Provider = { provide: 'S3Service', useExisting: S3Service };
@@ -191,18 +204,24 @@ const $UserFollowingService: Provider = { provide: 'UserFollowingService', useEx
 const $UserKeypairService: Provider = { provide: 'UserKeypairService', useExisting: UserKeypairService };
 const $UserListService: Provider = { provide: 'UserListService', useExisting: UserListService };
 const $UserMutingService: Provider = { provide: 'UserMutingService', useExisting: UserMutingService };
+const $UserRenoteMutingService: Provider = { provide: 'UserRenoteMutingService', useExisting: UserRenoteMutingService };
+const $UserSearchService: Provider = { provide: 'UserSearchService', useExisting: UserSearchService };
 const $UserSuspendService: Provider = { provide: 'UserSuspendService', useExisting: UserSuspendService };
 const $UserAuthService: Provider = { provide: 'UserAuthService', useExisting: UserAuthService };
 const $VideoProcessingService: Provider = { provide: 'VideoProcessingService', useExisting: VideoProcessingService };
-const $WebhookService: Provider = { provide: 'WebhookService', useExisting: WebhookService };
+const $UserWebhookService: Provider = { provide: 'UserWebhookService', useExisting: UserWebhookService };
+const $SystemWebhookService: Provider = { provide: 'SystemWebhookService', useExisting: SystemWebhookService };
+const $WebhookTestService: Provider = { provide: 'WebhookTestService', useExisting: WebhookTestService };
 const $UtilityService: Provider = { provide: 'UtilityService', useExisting: UtilityService };
 const $FileInfoService: Provider = { provide: 'FileInfoService', useExisting: FileInfoService };
+const $FlashService: Provider = { provide: 'FlashService', useExisting: FlashService };
 const $SearchService: Provider = { provide: 'SearchService', useExisting: SearchService };
 const $ClipService: Provider = { provide: 'ClipService', useExisting: ClipService };
 const $FeaturedService: Provider = { provide: 'FeaturedService', useExisting: FeaturedService };
 const $FanoutTimelineService: Provider = { provide: 'FanoutTimelineService', useExisting: FanoutTimelineService };
 const $FanoutTimelineEndpointService: Provider = { provide: 'FanoutTimelineEndpointService', useExisting: FanoutTimelineEndpointService };
 const $ChannelFollowingService: Provider = { provide: 'ChannelFollowingService', useExisting: ChannelFollowingService };
+const $ChatService: Provider = { provide: 'ChatService', useExisting: ChatService };
 const $RegistryApiService: Provider = { provide: 'RegistryApiService', useExisting: RegistryApiService };
 const $ReversiService: Provider = { provide: 'ReversiService', useExisting: ReversiService };
 
@@ -222,11 +241,14 @@ const $ApRequestChart: Provider = { provide: 'ApRequestChart', useExisting: ApRe
 const $ChartManagementService: Provider = { provide: 'ChartManagementService', useExisting: ChartManagementService };
 
 const $AbuseUserReportEntityService: Provider = { provide: 'AbuseUserReportEntityService', useExisting: AbuseUserReportEntityService };
+const $AnnouncementEntityService: Provider = { provide: 'AnnouncementEntityService', useExisting: AnnouncementEntityService };
+const $AbuseReportNotificationRecipientEntityService: Provider = { provide: 'AbuseReportNotificationRecipientEntityService', useExisting: AbuseReportNotificationRecipientEntityService };
 const $AntennaEntityService: Provider = { provide: 'AntennaEntityService', useExisting: AntennaEntityService };
 const $AppEntityService: Provider = { provide: 'AppEntityService', useExisting: AppEntityService };
 const $AuthSessionEntityService: Provider = { provide: 'AuthSessionEntityService', useExisting: AuthSessionEntityService };
 const $BlockingEntityService: Provider = { provide: 'BlockingEntityService', useExisting: BlockingEntityService };
 const $ChannelEntityService: Provider = { provide: 'ChannelEntityService', useExisting: ChannelEntityService };
+const $ChatEntityService: Provider = { provide: 'ChatEntityService', useExisting: ChatEntityService };
 const $ClipEntityService: Provider = { provide: 'ClipEntityService', useExisting: ClipEntityService };
 const $DriveFileEntityService: Provider = { provide: 'DriveFileEntityService', useExisting: DriveFileEntityService };
 const $DriveFolderEntityService: Provider = { provide: 'DriveFolderEntityService', useExisting: DriveFolderEntityService };
@@ -254,6 +276,8 @@ const $FlashEntityService: Provider = { provide: 'FlashEntityService', useExisti
 const $FlashLikeEntityService: Provider = { provide: 'FlashLikeEntityService', useExisting: FlashLikeEntityService };
 const $RoleEntityService: Provider = { provide: 'RoleEntityService', useExisting: RoleEntityService };
 const $ReversiGameEntityService: Provider = { provide: 'ReversiGameEntityService', useExisting: ReversiGameEntityService };
+const $MetaEntityService: Provider = { provide: 'MetaEntityService', useExisting: MetaEntityService };
+const $SystemWebhookEntityService: Provider = { provide: 'SystemWebhookEntityService', useExisting: SystemWebhookEntityService };
 
 const $ApAudienceService: Provider = { provide: 'ApAudienceService', useExisting: ApAudienceService };
 const $ApDbResolverService: Provider = { provide: 'ApDbResolverService', useExisting: ApDbResolverService };
@@ -264,7 +288,7 @@ const $ApMfmService: Provider = { provide: 'ApMfmService', useExisting: ApMfmSer
 const $ApRendererService: Provider = { provide: 'ApRendererService', useExisting: ApRendererService };
 const $ApRequestService: Provider = { provide: 'ApRequestService', useExisting: ApRequestService };
 const $ApResolverService: Provider = { provide: 'ApResolverService', useExisting: ApResolverService };
-const $LdSignatureService: Provider = { provide: 'LdSignatureService', useExisting: LdSignatureService };
+const $JsonLdService: Provider = { provide: 'JsonLdService', useExisting: JsonLdService };
 const $RemoteLoggerService: Provider = { provide: 'RemoteLoggerService', useExisting: RemoteLoggerService };
 const $RemoteUserResolveService: Provider = { provide: 'RemoteUserResolveService', useExisting: RemoteUserResolveService };
 const $WebfingerService: Provider = { provide: 'WebfingerService', useExisting: WebfingerService };
@@ -281,6 +305,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 	],
 	providers: [
 		LoggerService,
+		AbuseReportService,
+		AbuseReportNotificationService,
 		AccountMoveService,
 		AccountUpdateService,
 		AiService,
@@ -290,7 +316,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		AchievementService,
 		AvatarDecorationService,
 		CaptchaService,
-		CreateSystemUserService,
 		CustomEmojiService,
 		DeleteAccountService,
 		DownloadService,
@@ -303,7 +328,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		HttpRequestService,
 		IdService,
 		ImageProcessingService,
-		InstanceActorService,
 		InternalStorageService,
 		MetaService,
 		MfmService,
@@ -311,13 +335,13 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		NoteCreateService,
 		NoteDeleteService,
 		NotePiningService,
-		NoteReadService,
 		NotificationService,
 		PollService,
-		ProxyAccountService,
+		SystemAccountService,
 		PushNotificationService,
 		QueryService,
 		ReactionService,
+		ReactionsBufferingService,
 		RelayService,
 		RoleService,
 		S3Service,
@@ -330,18 +354,24 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		UserKeypairService,
 		UserListService,
 		UserMutingService,
+		UserRenoteMutingService,
+		UserSearchService,
 		UserSuspendService,
 		UserAuthService,
 		VideoProcessingService,
-		WebhookService,
+		UserWebhookService,
+		SystemWebhookService,
+		WebhookTestService,
 		UtilityService,
 		FileInfoService,
+		FlashService,
 		SearchService,
 		ClipService,
 		FeaturedService,
 		FanoutTimelineService,
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
+		ChatService,
 		RegistryApiService,
 		ReversiService,
 
@@ -361,11 +391,14 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChartManagementService,
 
 		AbuseUserReportEntityService,
+		AnnouncementEntityService,
+		AbuseReportNotificationRecipientEntityService,
 		AntennaEntityService,
 		AppEntityService,
 		AuthSessionEntityService,
 		BlockingEntityService,
 		ChannelEntityService,
+		ChatEntityService,
 		ClipEntityService,
 		DriveFileEntityService,
 		DriveFolderEntityService,
@@ -393,6 +426,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		FlashLikeEntityService,
 		RoleEntityService,
 		ReversiGameEntityService,
+		MetaEntityService,
+		SystemWebhookEntityService,
 
 		ApAudienceService,
 		ApDbResolverService,
@@ -403,7 +438,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApRendererService,
 		ApRequestService,
 		ApResolverService,
-		LdSignatureService,
+		JsonLdService,
 		RemoteLoggerService,
 		RemoteUserResolveService,
 		WebfingerService,
@@ -416,6 +451,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
 		$LoggerService,
+		$AbuseReportService,
+		$AbuseReportNotificationService,
 		$AccountMoveService,
 		$AccountUpdateService,
 		$AiService,
@@ -425,7 +462,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$AchievementService,
 		$AvatarDecorationService,
 		$CaptchaService,
-		$CreateSystemUserService,
 		$CustomEmojiService,
 		$DeleteAccountService,
 		$DownloadService,
@@ -438,7 +474,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$HttpRequestService,
 		$IdService,
 		$ImageProcessingService,
-		$InstanceActorService,
 		$InternalStorageService,
 		$MetaService,
 		$MfmService,
@@ -446,13 +481,13 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$NoteCreateService,
 		$NoteDeleteService,
 		$NotePiningService,
-		$NoteReadService,
 		$NotificationService,
 		$PollService,
-		$ProxyAccountService,
+		$SystemAccountService,
 		$PushNotificationService,
 		$QueryService,
 		$ReactionService,
+		$ReactionsBufferingService,
 		$RelayService,
 		$RoleService,
 		$S3Service,
@@ -465,18 +500,24 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$UserKeypairService,
 		$UserListService,
 		$UserMutingService,
+		$UserRenoteMutingService,
+		$UserSearchService,
 		$UserSuspendService,
 		$UserAuthService,
 		$VideoProcessingService,
-		$WebhookService,
+		$UserWebhookService,
+		$SystemWebhookService,
+		$WebhookTestService,
 		$UtilityService,
 		$FileInfoService,
+		$FlashService,
 		$SearchService,
 		$ClipService,
 		$FeaturedService,
 		$FanoutTimelineService,
 		$FanoutTimelineEndpointService,
 		$ChannelFollowingService,
+		$ChatService,
 		$RegistryApiService,
 		$ReversiService,
 
@@ -496,11 +537,14 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChartManagementService,
 
 		$AbuseUserReportEntityService,
+		$AnnouncementEntityService,
+		$AbuseReportNotificationRecipientEntityService,
 		$AntennaEntityService,
 		$AppEntityService,
 		$AuthSessionEntityService,
 		$BlockingEntityService,
 		$ChannelEntityService,
+		$ChatEntityService,
 		$ClipEntityService,
 		$DriveFileEntityService,
 		$DriveFolderEntityService,
@@ -528,6 +572,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$FlashLikeEntityService,
 		$RoleEntityService,
 		$ReversiGameEntityService,
+		$MetaEntityService,
+		$SystemWebhookEntityService,
 
 		$ApAudienceService,
 		$ApDbResolverService,
@@ -538,7 +584,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApRendererService,
 		$ApRequestService,
 		$ApResolverService,
-		$LdSignatureService,
+		$JsonLdService,
 		$RemoteLoggerService,
 		$RemoteUserResolveService,
 		$WebfingerService,
@@ -552,6 +598,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 	exports: [
 		QueueModule,
 		LoggerService,
+		AbuseReportService,
+		AbuseReportNotificationService,
 		AccountMoveService,
 		AccountUpdateService,
 		AiService,
@@ -561,7 +609,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		AchievementService,
 		AvatarDecorationService,
 		CaptchaService,
-		CreateSystemUserService,
 		CustomEmojiService,
 		DeleteAccountService,
 		DownloadService,
@@ -574,7 +621,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		HttpRequestService,
 		IdService,
 		ImageProcessingService,
-		InstanceActorService,
 		InternalStorageService,
 		MetaService,
 		MfmService,
@@ -582,13 +628,13 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		NoteCreateService,
 		NoteDeleteService,
 		NotePiningService,
-		NoteReadService,
 		NotificationService,
 		PollService,
-		ProxyAccountService,
+		SystemAccountService,
 		PushNotificationService,
 		QueryService,
 		ReactionService,
+		ReactionsBufferingService,
 		RelayService,
 		RoleService,
 		S3Service,
@@ -601,18 +647,24 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		UserKeypairService,
 		UserListService,
 		UserMutingService,
+		UserRenoteMutingService,
+		UserSearchService,
 		UserSuspendService,
 		UserAuthService,
 		VideoProcessingService,
-		WebhookService,
+		UserWebhookService,
+		SystemWebhookService,
+		WebhookTestService,
 		UtilityService,
 		FileInfoService,
+		FlashService,
 		SearchService,
 		ClipService,
 		FeaturedService,
 		FanoutTimelineService,
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
+		ChatService,
 		RegistryApiService,
 		ReversiService,
 
@@ -631,11 +683,14 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ChartManagementService,
 
 		AbuseUserReportEntityService,
+		AnnouncementEntityService,
+		AbuseReportNotificationRecipientEntityService,
 		AntennaEntityService,
 		AppEntityService,
 		AuthSessionEntityService,
 		BlockingEntityService,
 		ChannelEntityService,
+		ChatEntityService,
 		ClipEntityService,
 		DriveFileEntityService,
 		DriveFolderEntityService,
@@ -663,6 +718,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		FlashLikeEntityService,
 		RoleEntityService,
 		ReversiGameEntityService,
+		MetaEntityService,
+		SystemWebhookEntityService,
 
 		ApAudienceService,
 		ApDbResolverService,
@@ -673,7 +730,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		ApRendererService,
 		ApRequestService,
 		ApResolverService,
-		LdSignatureService,
+		JsonLdService,
 		RemoteLoggerService,
 		RemoteUserResolveService,
 		WebfingerService,
@@ -686,6 +743,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 
 		//#region 文字列ベースでのinjection用(循環参照対応のため)
 		$LoggerService,
+		$AbuseReportService,
+		$AbuseReportNotificationService,
 		$AccountMoveService,
 		$AccountUpdateService,
 		$AiService,
@@ -695,7 +754,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$AchievementService,
 		$AvatarDecorationService,
 		$CaptchaService,
-		$CreateSystemUserService,
 		$CustomEmojiService,
 		$DeleteAccountService,
 		$DownloadService,
@@ -708,7 +766,6 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$HttpRequestService,
 		$IdService,
 		$ImageProcessingService,
-		$InstanceActorService,
 		$InternalStorageService,
 		$MetaService,
 		$MfmService,
@@ -716,13 +773,13 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$NoteCreateService,
 		$NoteDeleteService,
 		$NotePiningService,
-		$NoteReadService,
 		$NotificationService,
 		$PollService,
-		$ProxyAccountService,
+		$SystemAccountService,
 		$PushNotificationService,
 		$QueryService,
 		$ReactionService,
+		$ReactionsBufferingService,
 		$RelayService,
 		$RoleService,
 		$S3Service,
@@ -735,10 +792,14 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$UserKeypairService,
 		$UserListService,
 		$UserMutingService,
+		$UserRenoteMutingService,
+		$UserSearchService,
 		$UserSuspendService,
 		$UserAuthService,
 		$VideoProcessingService,
-		$WebhookService,
+		$UserWebhookService,
+		$SystemWebhookService,
+		$WebhookTestService,
 		$UtilityService,
 		$FileInfoService,
 		$SearchService,
@@ -747,6 +808,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$FanoutTimelineService,
 		$FanoutTimelineEndpointService,
 		$ChannelFollowingService,
+		$ChatService,
 		$RegistryApiService,
 		$ReversiService,
 
@@ -765,11 +827,14 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ChartManagementService,
 
 		$AbuseUserReportEntityService,
+		$AnnouncementEntityService,
+		$AbuseReportNotificationRecipientEntityService,
 		$AntennaEntityService,
 		$AppEntityService,
 		$AuthSessionEntityService,
 		$BlockingEntityService,
 		$ChannelEntityService,
+		$ChatEntityService,
 		$ClipEntityService,
 		$DriveFileEntityService,
 		$DriveFolderEntityService,
@@ -797,6 +862,8 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$FlashLikeEntityService,
 		$RoleEntityService,
 		$ReversiGameEntityService,
+		$MetaEntityService,
+		$SystemWebhookEntityService,
 
 		$ApAudienceService,
 		$ApDbResolverService,
@@ -807,7 +874,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		$ApRendererService,
 		$ApRequestService,
 		$ApResolverService,
-		$LdSignatureService,
+		$JsonLdService,
 		$RemoteLoggerService,
 		$RemoteUserResolveService,
 		$WebfingerService,

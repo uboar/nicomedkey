@@ -55,9 +55,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 import * as Misskey from 'misskey-js';
 import { onMounted, ref, computed } from 'vue';
 import * as os from '@/os.js';
-import { misskeyApi } from '@/scripts/misskey-api.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { ACHIEVEMENT_TYPES, ACHIEVEMENT_BADGES, claimAchievement } from '@/scripts/achievements.js';
+import { ACHIEVEMENT_TYPES, ACHIEVEMENT_BADGES, claimAchievement } from '@/utility/achievements.js';
 
 const props = withDefaults(defineProps<{
 	user: Misskey.entities.User;
@@ -153,7 +153,7 @@ onMounted(() => {
 		background: linear-gradient(0deg, #ffee20, #eb7018);
 	}
 
-	&:before {
+	&::before {
 		content: "";
 		display: block;
 		position: absolute;
@@ -173,7 +173,7 @@ onMounted(() => {
 		background: linear-gradient(0deg, #e1e1e1, #7c7c7c);
 	}
 
-	&:before {
+	&::before {
 		content: "";
 		display: block;
 		position: absolute;

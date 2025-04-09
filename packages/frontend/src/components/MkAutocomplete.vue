@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</ol>
 	<ol v-else-if="emojis.length > 0" ref="suggests" :class="$style.list">
 		<li v-for="emoji in emojis" :key="emoji.emoji" :class="$style.item" tabindex="-1" @click="complete(type, emoji.emoji)" @keydown="onKeydown">
-			<MkCustomEmoji v-if="'isCustomEmoji' in emoji && emoji.isCustomEmoji" :name="emoji.emoji" :class="$style.emoji"/>
+			<MkCustomEmoji v-if="'isCustomEmoji' in emoji && emoji.isCustomEmoji" :name="emoji.emoji" :class="$style.emoji" :fallbackToImage="true"/>
 			<MkEmoji v-else :emoji="emoji.emoji" :class="$style.emoji"/>
 			<!-- eslint-disable-next-line vue/no-v-html -->
 			<span v-if="q" :class="$style.emojiName" v-html="sanitizeHtml(emoji.name.replace(q, `<b>${q}</b>`))"></span>
@@ -44,37 +44,28 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts">
-import { markRaw, ref, shallowRef, computed, onUpdated, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { markRaw, ref, useTemplateRef, computed, onUpdated, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import sanitizeHtml from 'sanitize-html';
-import contains from '@/scripts/contains.js';
-import { char2twemojiFilePath, char2fluentEmojiFilePath } from '@/scripts/emoji-base.js';
+import { emojilist, getEmojiName } from '@@/js/emojilist.js';
+import { char2twemojiFilePath, char2fluentEmojiFilePath } from '@@/js/emoji-base.js';
+import { MFM_TAGS, MFM_PARAMS } from '@@/js/const.js';
+import type { EmojiDef } from '@/utility/search-emoji.js';
+import contains from '@/utility/contains.js';
 import { acct } from '@/filters/user.js';
 import * as os from '@/os.js';
-import { misskeyApi } from '@/scripts/misskey-api.js';
-import { defaultStore } from '@/store.js';
-import { emojilist, getEmojiName } from '@/scripts/emojilist.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { customEmojis } from '@/custom-emojis.js';
-import { MFM_TAGS, MFM_PARAMS } from '@/const.js';
-
-type EmojiDef = {
-	emoji: string;
-	name: string;
-	url: string;
-	aliasOf?: string;
-} | {
-	emoji: string;
-	name: string;
-	aliasOf?: string;
-	isCustomEmoji?: true;
-};
+import { searchEmoji } from '@/utility/search-emoji.js';
+import { prefer } from '@/preferences.js';
 
 const lib = emojilist.filter(x => x.category !== 'flags');
 
 const emojiDb = computed(() => {
 	//#region Unicode Emoji
-	const char2path = defaultStore.reactiveState.emojiStyle.value === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
+	const char2path = prefer.r.emojiStyle.value === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
 
 	const unicodeEmojiDB: EmojiDef[] = lib.map(x => ({
 		emoji: x.char,
@@ -82,13 +73,13 @@ const emojiDb = computed(() => {
 		url: char2path(x.char),
 	}));
 
-	for (const index of Object.values(defaultStore.state.additionalUnicodeEmojiIndexes)) {
+	for (const index of Object.values(store.s.additionalUnicodeEmojiIndexes)) {
 		for (const [emoji, keywords] of Object.entries(index)) {
 			for (const k of keywords) {
 				unicodeEmojiDB.push({
 					emoji: emoji,
 					name: k,
-					aliasOf: getEmojiName(emoji)!,
+					aliasOf: getEmojiName(emoji),
 					url: char2path(emoji),
 				});
 			}
@@ -148,7 +139,7 @@ const emit = defineEmits<{
 }>();
 
 const suggests = ref<Element>();
-const rootEl = shallowRef<HTMLDivElement>();
+const rootEl = useTemplateRef('rootEl');
 
 const fetching = ref(true);
 const users = ref<any[]>([]);
@@ -164,10 +155,10 @@ function complete(type: string, value: any) {
 	emit('done', { type, value });
 	emit('closed');
 	if (type === 'emoji') {
-		let recents = defaultStore.state.recentlyUsedEmojis;
+		let recents = store.s.recentlyUsedEmojis;
 		recents = recents.filter((emoji: any) => emoji !== value);
 		recents.unshift(value);
-		defaultStore.set('recentlyUsedEmojis', recents.splice(0, 32));
+		store.set('recentlyUsedEmojis', recents.splice(0, 32));
 	}
 }
 
@@ -208,8 +199,10 @@ function exec() {
 			users.value = JSON.parse(cache);
 			fetching.value = false;
 		} else {
+			const [username, host] = props.q.toString().split('@');
 			misskeyApi('users/search-by-username-and-host', {
-				username: props.q,
+				username: username,
+				host: host,
 				limit: 10,
 				detail: false,
 			}).then(searchedUsers => {
@@ -245,11 +238,11 @@ function exec() {
 	} else if (props.type === 'emoji') {
 		if (!props.q || props.q === '') {
 			// 最近使った絵文字をサジェスト
-			emojis.value = defaultStore.state.recentlyUsedEmojis.map(emoji => emojiDb.value.find(dbEmoji => dbEmoji.emoji === emoji)).filter(x => x) as EmojiDef[];
+			emojis.value = store.s.recentlyUsedEmojis.map(emoji => emojiDb.value.find(dbEmoji => dbEmoji.emoji === emoji)).filter(x => x) as EmojiDef[];
 			return;
 		}
 
-		emojis.value = emojiAutoComplete(props.q, emojiDb.value);
+		emojis.value = searchEmoji(props.q, emojiDb.value);
 	} else if (props.type === 'mfmTag') {
 		if (!props.q || props.q === '') {
 			mfmTags.value = MFM_TAGS;
@@ -265,87 +258,6 @@ function exec() {
 
 		mfmParams.value = MFM_PARAMS[props.q.tag].filter(param => param.startsWith(props.q.params.at(-1) ?? ''));
 	}
-}
-
-type EmojiScore = { emoji: EmojiDef, score: number };
-
-function emojiAutoComplete(query: string | null, emojiDb: EmojiDef[], max = 30): EmojiDef[] {
-	if (!query) {
-		return [];
-	}
-
-	const matched = new Map<string, EmojiScore>();
-	// 完全一致（エイリアス込み）
-	emojiDb.some(x => {
-		if (x.name === query && !matched.has(x.aliasOf ?? x.name)) {
-			matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length + 2 });
-		}
-		return matched.size === max;
-	});
-
-	// 前方一致（エイリアスなし）
-	if (matched.size < max) {
-		emojiDb.some(x => {
-			if (x.name.startsWith(query) && !x.aliasOf) {
-				matched.set(x.name, { emoji: x, score: query.length + 1 });
-			}
-			return matched.size === max;
-		});
-	}
-
-	// 前方一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some(x => {
-			if (x.name.startsWith(query) && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length });
-			}
-			return matched.size === max;
-		});
-	}
-
-	// 部分一致（エイリアス込み）
-	if (matched.size < max) {
-		emojiDb.some(x => {
-			if (x.name.includes(query) && !matched.has(x.aliasOf ?? x.name)) {
-				matched.set(x.aliasOf ?? x.name, { emoji: x, score: query.length - 1 });
-			}
-			return matched.size === max;
-		});
-	}
-
-	// 簡易あいまい検索（3文字以上）
-	if (matched.size < max && query.length > 3) {
-		const queryChars = [...query];
-		const hitEmojis = new Map<string, EmojiScore>();
-
-		for (const x of emojiDb) {
-			// 文字列の位置を進めながら、クエリの文字を順番に探す
-
-			let pos = 0;
-			let hit = 0;
-			for (const c of queryChars) {
-				pos = x.name.indexOf(c, pos);
-				if (pos <= -1) break;
-				hit++;
-			}
-
-			// 半分以上の文字が含まれていればヒットとする
-			if (hit > Math.ceil(queryChars.length / 2) && hit - 2 > (matched.get(x.aliasOf ?? x.name)?.score ?? 0)) {
-				hitEmojis.set(x.aliasOf ?? x.name, { emoji: x, score: hit - 2 });
-			}
-		}
-
-		// ヒットしたものを全部追加すると雑多になるので、先頭の6件程度だけにしておく（6件＝オートコンプリートのポップアップのサイズ分）
-		[...hitEmojis.values()]
-			.sort((x, y) => y.score - x.score)
-			.slice(0, 6)
-			.forEach(it => matched.set(it.emoji.name, it));
-	}
-
-	return [...matched.values()]
-		.sort((x, y) => y.score - x.score)
-		.slice(0, max)
-		.map(it => it.emoji);
 }
 
 function onMousedown(event: Event) {
@@ -447,7 +359,7 @@ onMounted(() => {
 
 	props.textarea.addEventListener('keydown', onKeydown);
 
-	document.body.addEventListener('mousedown', onMousedown);
+	window.document.body.addEventListener('mousedown', onMousedown);
 
 	nextTick(() => {
 		exec();
@@ -463,7 +375,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	props.textarea.removeEventListener('keydown', onKeydown);
 
-	document.body.removeEventListener('mousedown', onMousedown);
+	window.document.body.removeEventListener('mousedown', onMousedown);
 });
 </script>
 
@@ -499,16 +411,16 @@ onBeforeUnmount(() => {
 	text-overflow: ellipsis;
 
 	&:hover {
-		background: var(--X3);
+		background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
 	}
 
 	&[data-selected='true'] {
-		background: var(--accent);
+		background: var(--MI_THEME-accent);
 		color: #fff !important;
 	}
 
 	&:active {
-		background: var(--accentDarken);
+		background: hsl(from var(--MI_THEME-accent) h s calc(l - 10));
 		color: #fff !important;
 	}
 }

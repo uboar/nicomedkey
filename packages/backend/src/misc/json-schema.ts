@@ -4,12 +4,12 @@
  */
 
 import {
-	packedUserLiteSchema,
-	packedUserDetailedNotMeOnlySchema,
 	packedMeDetailedOnlySchema,
-	packedUserDetailedNotMeSchema,
 	packedMeDetailedSchema,
+	packedUserDetailedNotMeOnlySchema,
+	packedUserDetailedNotMeSchema,
 	packedUserDetailedSchema,
+	packedUserLiteSchema,
 	packedUserSchema,
 } from '@/models/json-schema/user.js';
 import { packedNoteSchema } from '@/models/json-schema/note.js';
@@ -25,7 +25,7 @@ import { packedBlockingSchema } from '@/models/json-schema/blocking.js';
 import { packedNoteReactionSchema } from '@/models/json-schema/note-reaction.js';
 import { packedHashtagSchema } from '@/models/json-schema/hashtag.js';
 import { packedInviteCodeSchema } from '@/models/json-schema/invite-code.js';
-import { packedPageSchema, packedPageBlockSchema } from '@/models/json-schema/page.js';
+import { packedPageBlockSchema, packedPageSchema } from '@/models/json-schema/page.js';
 import { packedNoteFavoriteSchema } from '@/models/json-schema/note-favorite.js';
 import { packedChannelSchema } from '@/models/json-schema/channel.js';
 import { packedAntennaSchema } from '@/models/json-schema/antenna.js';
@@ -33,23 +33,40 @@ import { packedClipSchema } from '@/models/json-schema/clip.js';
 import { packedFederationInstanceSchema } from '@/models/json-schema/federation-instance.js';
 import { packedQueueCountSchema } from '@/models/json-schema/queue.js';
 import { packedGalleryPostSchema } from '@/models/json-schema/gallery-post.js';
-import { packedEmojiDetailedSchema, packedEmojiSimpleSchema } from '@/models/json-schema/emoji.js';
+import {
+	packedEmojiDetailedAdminSchema,
+	packedEmojiDetailedSchema,
+	packedEmojiSimpleSchema,
+} from '@/models/json-schema/emoji.js';
 import { packedFlashSchema } from '@/models/json-schema/flash.js';
 import { packedAnnouncementSchema } from '@/models/json-schema/announcement.js';
 import { packedSigninSchema } from '@/models/json-schema/signin.js';
 import {
-	packedRoleLiteSchema,
-	packedRoleSchema,
-	packedRolePoliciesSchema,
-	packedRoleCondFormulaLogicsSchema,
-	packedRoleCondFormulaValueNot,
-	packedRoleCondFormulaValueIsLocalOrRemoteSchema,
-	packedRoleCondFormulaValueCreatedSchema,
 	packedRoleCondFormulaFollowersOrFollowingOrNotesSchema,
+	packedRoleCondFormulaLogicsSchema,
+	packedRoleCondFormulaValueAssignedRoleSchema,
+	packedRoleCondFormulaValueCreatedSchema,
+	packedRoleCondFormulaValueIsLocalOrRemoteSchema,
+	packedRoleCondFormulaValueNot,
 	packedRoleCondFormulaValueSchema,
+	packedRoleCondFormulaValueUserSettingBooleanSchema,
+	packedRoleLiteSchema,
+	packedRolePoliciesSchema,
+	packedRoleSchema,
 } from '@/models/json-schema/role.js';
 import { packedAdSchema } from '@/models/json-schema/ad.js';
-import { packedReversiGameLiteSchema, packedReversiGameDetailedSchema } from '@/models/json-schema/reversi-game.js';
+import { packedReversiGameDetailedSchema, packedReversiGameLiteSchema } from '@/models/json-schema/reversi-game.js';
+import {
+	packedMetaDetailedOnlySchema,
+	packedMetaDetailedSchema,
+	packedMetaLiteSchema,
+} from '@/models/json-schema/meta.js';
+import { packedSystemWebhookSchema } from '@/models/json-schema/system-webhook.js';
+import { packedAbuseReportNotificationRecipientSchema } from '@/models/json-schema/abuse-report-notification-recipient.js';
+import { packedChatMessageSchema, packedChatMessageLiteSchema, packedChatMessageLiteForRoomSchema, packedChatMessageLiteFor1on1Schema } from '@/models/json-schema/chat-message.js';
+import { packedChatRoomSchema } from '@/models/json-schema/chat-room.js';
+import { packedChatRoomInvitationSchema } from '@/models/json-schema/chat-room-invitation.js';
+import { packedChatRoomMembershipSchema } from '@/models/json-schema/chat-room-membership.js';
 
 export const refs = {
 	UserLite: packedUserLiteSchema,
@@ -86,11 +103,14 @@ export const refs = {
 	GalleryPost: packedGalleryPostSchema,
 	EmojiSimple: packedEmojiSimpleSchema,
 	EmojiDetailed: packedEmojiDetailedSchema,
+	EmojiDetailedAdmin: packedEmojiDetailedAdminSchema,
 	Flash: packedFlashSchema,
 	Signin: packedSigninSchema,
 	RoleCondFormulaLogics: packedRoleCondFormulaLogicsSchema,
 	RoleCondFormulaValueNot: packedRoleCondFormulaValueNot,
 	RoleCondFormulaValueIsLocalOrRemote: packedRoleCondFormulaValueIsLocalOrRemoteSchema,
+	RoleCondFormulaValueUserSettingBooleanSchema: packedRoleCondFormulaValueUserSettingBooleanSchema,
+	RoleCondFormulaValueAssignedRole: packedRoleCondFormulaValueAssignedRoleSchema,
 	RoleCondFormulaValueCreated: packedRoleCondFormulaValueCreatedSchema,
 	RoleCondFormulaFollowersOrFollowingOrNotes: packedRoleCondFormulaFollowersOrFollowingOrNotesSchema,
 	RoleCondFormulaValue: packedRoleCondFormulaValueSchema,
@@ -99,6 +119,18 @@ export const refs = {
 	RolePolicies: packedRolePoliciesSchema,
 	ReversiGameLite: packedReversiGameLiteSchema,
 	ReversiGameDetailed: packedReversiGameDetailedSchema,
+	MetaLite: packedMetaLiteSchema,
+	MetaDetailedOnly: packedMetaDetailedOnlySchema,
+	MetaDetailed: packedMetaDetailedSchema,
+	SystemWebhook: packedSystemWebhookSchema,
+	AbuseReportNotificationRecipient: packedAbuseReportNotificationRecipientSchema,
+	ChatMessage: packedChatMessageSchema,
+	ChatMessageLite: packedChatMessageLiteSchema,
+	ChatMessageLiteFor1on1: packedChatMessageLiteFor1on1Schema,
+	ChatMessageLiteForRoom: packedChatMessageLiteForRoomSchema,
+	ChatRoom: packedChatRoomSchema,
+	ChatRoomInvitation: packedChatRoomInvitationSchema,
+	ChatRoomMembership: packedChatRoomMembershipSchema,
 };
 
 export type Packed<x extends keyof typeof refs> = SchemaType<typeof refs[x]>;
@@ -122,13 +154,15 @@ type OfSchema = {
 	readonly anyOf?: ReadonlyArray<Schema>;
 	readonly oneOf?: ReadonlyArray<Schema>;
 	readonly allOf?: ReadonlyArray<Schema>;
-}
+};
 
 export interface Schema extends OfSchema {
 	readonly type?: TypeStringef;
 	readonly nullable?: boolean;
 	readonly optional?: boolean;
+	readonly prefixItems?: ReadonlyArray<Schema>;
 	readonly items?: Schema;
+	readonly unevaluatedItems?: Schema | boolean;
 	readonly properties?: Obj;
 	readonly required?: ReadonlyArray<Extract<keyof NonNullable<this['properties']>, string>>;
 	readonly description?: string;
@@ -143,15 +177,16 @@ export interface Schema extends OfSchema {
 	readonly maximum?: number;
 	readonly minimum?: number;
 	readonly pattern?: string;
+	readonly additionalProperties?: Schema | boolean;
 }
 
 type RequiredPropertyNames<s extends Obj> = {
 	[K in keyof s]:
-		// K is not optional
-		s[K]['optional'] extends false ? K :
-		// K has default value
-		s[K]['default'] extends null | string | number | boolean | Record<string, unknown> ? K :
-		never
+	// K is not optional
+	s[K]['optional'] extends false ? K :
+	// K has default value
+	s[K]['default'] extends null | string | number | boolean | Record<string, unknown> ? K :
+	never
 }[keyof s];
 
 export type Obj = Record<string, Schema>;
@@ -182,6 +217,7 @@ type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X
 //type UnionObjectSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends any ? ObjectSchemaType<X> : never;
 type UnionObjType<s extends Obj, a extends readonly any[], X extends ReadonlyArray<keyof s> = a[number]> = X extends any ? ObjType<s, X> : never;
 type ArrayUnion<T> = T extends any ? Array<T> : never;
+type ArrayToTuple<X extends ReadonlyArray<Schema>> = { [K in keyof X]: SchemaType<X[K]> };
 
 type ObjectSchemaTypeDef<p extends Schema> =
 	p['ref'] extends keyof typeof refs ? Packed<p['ref']> :
@@ -189,11 +225,18 @@ type ObjectSchemaTypeDef<p extends Schema> =
 		p['anyOf'] extends ReadonlyArray<Schema> ? p['anyOf'][number]['required'] extends ReadonlyArray<keyof p['properties']> ?
 			UnionObjType<p['properties'], NonNullable<p['anyOf'][number]['required']>> & ObjType<p['properties'], NonNullable<p['required']>>
 			: never
-			: ObjType<p['properties'], NonNullable<p['required']>>
-	:
-	p['anyOf'] extends ReadonlyArray<Schema> ? never : // see CONTRIBUTING.md
-	p['allOf'] extends ReadonlyArray<Schema> ? UnionToIntersection<UnionSchemaType<p['allOf']>> :
-	any
+		: ObjType<p['properties'], NonNullable<p['required']>>
+		:
+		p['anyOf'] extends ReadonlyArray<Schema> ? never : // see CONTRIBUTING.md
+		p['allOf'] extends ReadonlyArray<Schema> ? UnionToIntersection<UnionSchemaType<p['allOf']>> :
+		p['additionalProperties'] extends true ? Record<string, any> :
+		p['additionalProperties'] extends Schema ?
+			p['additionalProperties'] extends infer AdditionalProperties ?
+				AdditionalProperties extends Schema ?
+					Record<string, SchemaType<AdditionalProperties>> :
+					never :
+				never :
+			any;
 
 type ObjectSchemaType<p extends Schema> = NullOrUndefined<p, ObjectSchemaTypeDef<p>>;
 
@@ -203,24 +246,30 @@ export type SchemaTypeDef<p extends Schema> =
 	p['type'] extends 'number' ? number :
 	p['type'] extends 'string' ? (
 		p['enum'] extends readonly (string | null)[] ?
-		p['enum'][number] :
-		p['format'] extends 'date-time' ? string : // Dateにする？？
-		string
+			p['enum'][number] :
+			p['format'] extends 'date-time' ? string : // Dateにする？？
+			string
 	) :
-	p['type'] extends 'boolean' ? boolean :
-	p['type'] extends 'object' ? ObjectSchemaTypeDef<p> :
-	p['type'] extends 'array' ? (
-		p['items'] extends OfSchema ? (
-			p['items']['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<NonNullable<p['items']['anyOf']>>[] :
-			p['items']['oneOf'] extends ReadonlyArray<Schema> ? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>> :
-			p['items']['allOf'] extends ReadonlyArray<Schema> ? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[] :
-			never
+		p['type'] extends 'boolean' ? boolean :
+		p['type'] extends 'object' ? ObjectSchemaTypeDef<p> :
+		p['type'] extends 'array' ? (
+			p['items'] extends OfSchema ? (
+				p['items']['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<NonNullable<p['items']['anyOf']>>[] :
+				p['items']['oneOf'] extends ReadonlyArray<Schema> ? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>> :
+				p['items']['allOf'] extends ReadonlyArray<Schema> ? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[] :
+				never
+			) :
+				p['prefixItems'] extends ReadonlyArray<Schema> ? (
+					p['items'] extends NonNullable<Schema> ? [...ArrayToTuple<p['prefixItems']>, ...SchemaType<p['items']>[]] :
+					p['items'] extends false ? ArrayToTuple<p['prefixItems']> :
+					p['unevaluatedItems'] extends false ? ArrayToTuple<p['prefixItems']> :
+					[...ArrayToTuple<p['prefixItems']>, ...unknown[]]
+				) :
+					p['items'] extends NonNullable<Schema> ? SchemaType<p['items']>[] :
+					any[]
 		) :
-		p['items'] extends NonNullable<Schema> ? SchemaTypeDef<p['items']>[] :
-		any[]
-	) :
-	p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> & PartialIntersection<UnionSchemaType<p['anyOf']>> :
-	p['oneOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['oneOf']> :
-	any;
+			p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> & PartialIntersection<UnionSchemaType<p['anyOf']>> :
+			p['oneOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['oneOf']> :
+			any;
 
 export type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;
