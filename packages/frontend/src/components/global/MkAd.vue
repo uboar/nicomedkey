@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<a v-else :href="chosen.url" target="_blank" :class="$style.link">
 			<img :src="chosen.imageUrl" :class="$style.img">
 			<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon" class="ti ti-info-circle"></i></button>
-		</component>
+		</a>
 	</div>
 	<div v-else :class="$style.menu">
 		<div>Ads by {{ host }}</div>

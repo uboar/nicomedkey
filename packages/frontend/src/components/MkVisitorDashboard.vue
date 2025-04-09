@@ -73,7 +73,7 @@ import XActiveUsersChart from '@/components/MkVisitorDashboard.ActiveUsersChart.
 import { openInstanceMenu } from '@/ui/_common_/common.js';
 import type { MenuItem } from '@/types/menu.js';
 
-const meta = ref<Misskey.entities.MetaResponse | null>(null);
+const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const stats = ref<Misskey.entities.StatsResponse | null>(null);
 
 misskeyApi('stats', {}).then((res) => {
