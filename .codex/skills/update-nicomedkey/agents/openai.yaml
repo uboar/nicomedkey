@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update nicomedkey"
+  short_description: "nicomedkeyをMisskey最新リリースへ追従し、公開手順をActions運用に揃える"
+  default_prompt: "Use $update-nicomedkey to merge the latest Misskey release into this nicomedkey checkout, update the version string, and explain how container publishing should run from GitHub Actions on pushes to main."
