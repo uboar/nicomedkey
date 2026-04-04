@@ -65,6 +65,11 @@ jobs:
     needs:
       - build
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v6.0.2
+      - name: Get version from package.json
+        id: pkg
+        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
       - name: Download digests
         uses: actions/download-artifact@v7
         with:
@@ -81,8 +86,8 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create --tag ${{ env.REGISTRY_IMAGE }}:develop \
+          docker buildx imagetools create --tag ${{ env.REGISTRY_IMAGE }}:${{ steps.pkg.outputs.version }} \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:develop
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.pkg.outputs.version }}
