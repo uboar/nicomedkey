@@ -1,30 +1,70 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<img v-if="!useOsNativeEmojis" :class="$style.root" :src="url" :alt="props.emoji" decoding="async" @pointerenter="computeTitle"/>
-<span v-else-if="useOsNativeEmojis" :alt="props.emoji" @pointerenter="computeTitle">{{ props.emoji }}</span>
-<span v-else>{{ emoji }}</span>
+<img v-if="!useOsNativeEmojis" :class="$style.root" :src="url" :alt="props.emoji" decoding="async" @pointerenter="computeTitle" @click="onClick"/>
+<span v-else :alt="props.emoji" @pointerenter="computeTitle" @click="onClick">{{ colorizedNativeEmoji }}</span>
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { char2twemojiFilePath, char2fluentEmojiFilePath } from '@/scripts/emoji-base';
-import { defaultStore } from '@/store';
-import { getEmojiName } from '@/scripts/emojilist';
+import { computed, inject } from 'vue';
+import { colorizeEmoji, getEmojiName } from '@@/js/emojilist.js';
+import { char2fluentEmojiFilePath, char2twemojiFilePath } from '@@/js/emoji-base.js';
+import type { MenuItem } from '@/types/menu.js';
+import * as os from '@/os.js';
+import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import { i18n } from '@/i18n.js';
+import { prefer } from '@/preferences.js';
+import { DI } from '@/di.js';
 
 const props = defineProps<{
 	emoji: string;
+	menu?: boolean;
+	menuReaction?: boolean;
 }>();
 
-const char2path = defaultStore.state.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
+const react = inject(DI.mfmEmojiReactCallback, null);
 
-const useOsNativeEmojis = computed(() => defaultStore.state.emojiStyle === 'native');
-const url = computed(() => {
-	return char2path(props.emoji);
-});
+const char2path = prefer.s.emojiStyle === 'twemoji' ? char2twemojiFilePath : char2fluentEmojiFilePath;
+
+const useOsNativeEmojis = computed(() => prefer.s.emojiStyle === 'native');
+const url = computed(() => char2path(props.emoji));
+const colorizedNativeEmoji = computed(() => colorizeEmoji(props.emoji));
 
 // Searching from an array with 2000 items for every emoji felt like too energy-consuming, so I decided to do it lazily on pointerenter
 function computeTitle(event: PointerEvent): void {
-	const title = getEmojiName(props.emoji as string) ?? props.emoji as string;
-	(event.target as HTMLElement).title = title;
+	(event.target as HTMLElement).title = getEmojiName(props.emoji);
+}
+
+function onClick(ev: MouseEvent) {
+	if (props.menu) {
+		const menuItems: MenuItem[] = [];
+
+		menuItems.push({
+			type: 'label',
+			text: props.emoji,
+		}, {
+			text: i18n.ts.copy,
+			icon: 'ti ti-copy',
+			action: () => {
+				copyToClipboard(props.emoji);
+			},
+		});
+
+		if (props.menuReaction && react) {
+			menuItems.push({
+				text: i18n.ts.doReaction,
+				icon: 'ti ti-plus',
+				action: () => {
+					react(props.emoji);
+				},
+			});
+		}
+
+		os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+	}
 }
 </script>
 

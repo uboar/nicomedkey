@@ -1,65 +1,58 @@
-<template>
-<div class="">
-	<FormSuspense :p="init">
-		<div class="_gaps">
-			<MkButton primary @click="addAccount"><i class="ti ti-plus"></i> {{ i18n.ts.addAccount }}</MkButton>
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
 
-			<div v-for="account in accounts" :key="account.id" class="_panel _button lcjjdxlm" @click="menu(account, $event)">
-				<div class="avatar">
-					<MkAvatar :user="account" class="avatar"/>
-				</div>
-				<div class="body">
-					<div class="name">
-						<MkUserName :user="account"/>
-					</div>
-					<div class="acct">
-						<MkAcct :user="account"/>
-					</div>
-				</div>
-			</div>
+<template>
+<SearchMarker path="/settings/accounts" :label="i18n.ts.accounts" :keywords="['accounts']" icon="ti ti-users">
+	<div class="_gaps">
+		<div class="_buttons">
+			<MkButton primary @click="addAccount"><i class="ti ti-plus"></i> {{ i18n.ts.addAccount }}</MkButton>
+			<!--<MkButton @click="refreshAllAccounts"><i class="ti ti-refresh"></i></MkButton>-->
 		</div>
-	</FormSuspense>
-</div>
+
+		<MkUserCardMini v-for="x in accounts" :key="x[0] + x[1].id" :user="x[1]" :class="$style.user" @click.prevent="menu(x[0], x[1], $event)"/>
+	</div>
+</SearchMarker>
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, ref } from 'vue';
-import FormSuspense from '@/components/form/suspense.vue';
+import { ref, computed } from 'vue';
+import * as Misskey from 'misskey-js';
+import type { MenuItem } from '@/types/menu.js';
 import MkButton from '@/components/MkButton.vue';
-import * as os from '@/os';
-import { getAccounts, addAccount as addAccounts, removeAccount as _removeAccount, login, $i } from '@/account';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import * as os from '@/os.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { $i } from '@/i.js';
+import { switchAccount, removeAccount, login, getAccountWithSigninDialog, getAccountWithSignupDialog } from '@/accounts.js';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
+import MkUserCardMini from '@/components/MkUserCardMini.vue';
+import { prefer } from '@/preferences.js';
 
-const storedAccounts = ref<any>(null);
-const accounts = ref<any>(null);
+const accounts = prefer.r.accounts;
 
-const init = async () => {
-	getAccounts().then(accounts => {
-		storedAccounts.value = accounts.filter(x => x.id !== $i!.id);
+function refreshAllAccounts() {
+	// TODO
+}
 
-		return os.api('users/show', {
-			userIds: storedAccounts.value.map(x => x.id),
-		});
-	}).then(response => {
-		accounts.value = response;
-	});
-};
+function menu(host: string, account: Misskey.entities.UserDetailed, ev: MouseEvent) {
+	let menu: MenuItem[];
 
-function menu(account, ev) {
-	os.popupMenu([{
+	menu = [{
 		text: i18n.ts.switch,
 		icon: 'ti ti-switch-horizontal',
-		action: () => switchAccount(account),
+		action: () => switchAccount(host, account.id),
 	}, {
 		text: i18n.ts.remove,
 		icon: 'ti ti-trash',
-		danger: true,
-		action: () => removeAccount(account),
-	}], ev.currentTarget ?? ev.target);
+		action: () => removeAccount(host, account.id),
+	}];
+
+	os.popupMenu(menu, ev.currentTarget ?? ev.target);
 }
 
-function addAccount(ev) {
+function addAccount(ev: MouseEvent) {
 	os.popupMenu([{
 		text: i18n.ts.existingAccount,
 		action: () => { addExistingAccount(); },
@@ -69,74 +62,77 @@ function addAccount(ev) {
 	}], ev.currentTarget ?? ev.target);
 }
 
-function removeAccount(account) {
-	_removeAccount(account.id);
-}
-
 function addExistingAccount() {
-	os.popup(defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')), {}, {
-		done: res => {
-			addAccounts(res.id, res.i);
+	getAccountWithSigninDialog().then((res) => {
+		if (res != null) {
 			os.success();
-		},
-	}, 'closed');
+		}
+	});
 }
 
 function createAccount() {
-	os.popup(defineAsyncComponent(() => import('@/components/MkSignupDialog.vue')), {}, {
-		done: res => {
-			addAccounts(res.id, res.i);
-			switchAccountWithToken(res.i);
-		},
-	}, 'closed');
+	getAccountWithSignupDialog().then((res) => {
+		if (res != null) {
+			login(res.token);
+		}
+	});
 }
 
-async function switchAccount(account: any) {
-	const fetchedAccounts: any[] = await getAccounts();
-	const token = fetchedAccounts.find(x => x.id === account.id).token;
-	switchAccountWithToken(token);
-}
+const headerActions = computed(() => []);
 
-function switchAccountWithToken(token: string) {
-	login(token);
-}
+const headerTabs = computed(() => []);
 
-const headerActions = $computed(() => []);
-
-const headerTabs = $computed(() => []);
-
-definePageMetadata({
+definePage(() => ({
 	title: i18n.ts.accounts,
 	icon: 'ti ti-users',
-});
+}));
 </script>
 
-<style lang="scss" scoped>
-.lcjjdxlm {
+<style lang="scss" module>
+.user {
+	cursor: pointer;
+}
+
+.unknownUser {
 	display: flex;
+	align-items: center;
+	text-align: start;
 	padding: 16px;
+	background: var(--MI_THEME-panel);
+	border-radius: 8px;
+	font-size: 0.9em;
+}
 
-	> .avatar {
-		display: block;
-		flex-shrink: 0;
-		margin: 0 12px 0 0;
+.unknownUserAvatarMock {
+	display: block;
+	width: 34px;
+	height: 34px;
+	line-height: 34px;
+	text-align: center;
+	font-size: 16px;
+	margin-right: 12px;
+	background-color: color-mix(in srgb, var(--MI_THEME-fg), transparent 85%);
+	color: color-mix(in srgb, var(--MI_THEME-fg), transparent 25%);
+	border-radius: 50%;
+}
 
-		> .avatar {
-			width: 50px;
-			height: 50px;
-		}
-	}
+.unknownUserTitle {
+	display: block;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 18px;
+}
 
-	> .body {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		width: calc(100% - 62px);
-		position: relative;
-
-		> .name {
-			font-weight: bold;
-		}
-	}
+.unknownUserSub {
+	display: block;
+	width: 100%;
+	font-size: 95%;
+	opacity: 0.7;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 16px;
 }
 </style>

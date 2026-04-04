@@ -1,13 +1,19 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
+import { Brackets } from 'typeorm';
 import { DI } from '@/di-symbols.js';
-import type { RoleAssignmentsRepository, RolesRepository } from '@/models/index.js';
+import type { RoleAssignmentsRepository, RolesRepository } from '@/models/_.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
-import type { Packed } from '@/misc/schema.js';
-import type { User } from '@/models/entities/User.js';
-import type { Role } from '@/models/entities/Role.js';
+import type { MiUser } from '@/models/User.js';
+import type { MiRole } from '@/models/Role.js';
 import { bindThis } from '@/decorators.js';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
-import { UserEntityService } from './UserEntityService.js';
+import { IdService } from '@/core/IdService.js';
+import { Packed } from '@/misc/json-schema.js';
 
 @Injectable()
 export class RoleEntityService {
@@ -18,27 +24,25 @@ export class RoleEntityService {
 		@Inject(DI.roleAssignmentsRepository)
 		private roleAssignmentsRepository: RoleAssignmentsRepository,
 
-		private userEntityService: UserEntityService,
+		private idService: IdService,
 	) {
 	}
 
 	@bindThis
 	public async pack(
-		src: Role['id'] | Role,
-		me?: { id: User['id'] } | null | undefined,
-		options?: {
-			detail?: boolean;
-		},
-	) {
-		const opts = Object.assign({
-			detail: true,
-		}, options);
-
+		src: MiRole['id'] | MiRole,
+		me?: { id: MiUser['id'] } | null | undefined,
+	): Promise<Packed<'Role'>> {
 		const role = typeof src === 'object' ? src : await this.rolesRepository.findOneByOrFail({ id: src });
 
-		const assigns = await this.roleAssignmentsRepository.findBy({
-			roleId: role.id,
-		});
+		const assignedCount = await this.roleAssignmentsRepository.createQueryBuilder('assign')
+			.where('assign.roleId = :roleId', { roleId: role.id })
+			.andWhere(new Brackets(qb => {
+				qb
+					.where('assign.expiresAt IS NULL')
+					.orWhere('assign.expiresAt > :now', { now: new Date() });
+			}))
+			.getCount();
 
 		const policies = { ...role.policies };
 		for (const [k, v] of Object.entries(DEFAULT_POLICIES)) {
@@ -51,7 +55,7 @@ export class RoleEntityService {
 
 		return await awaitAll({
 			id: role.id,
-			createdAt: role.createdAt.toISOString(),
+			createdAt: this.idService.parse(role.id).date.toISOString(),
 			updatedAt: role.updatedAt.toISOString(),
 			name: role.name,
 			description: role.description,
@@ -62,25 +66,22 @@ export class RoleEntityService {
 			isPublic: role.isPublic,
 			isAdministrator: role.isAdministrator,
 			isModerator: role.isModerator,
+			isExplorable: role.isExplorable,
 			asBadge: role.asBadge,
+			preserveAssignmentOnMoveAccount: role.preserveAssignmentOnMoveAccount,
 			canEditMembersByModerator: role.canEditMembersByModerator,
+			displayOrder: role.displayOrder,
 			policies: policies,
-			usersCount: assigns.length,
-			...(opts.detail ? {
-				users: this.userEntityService.packMany(assigns.map(x => x.userId), me),
-			} : {}),
+			usersCount: assignedCount,
 		});
 	}
 
 	@bindThis
 	public packMany(
 		roles: any[],
-		me: { id: User['id'] },
-		options?: {
-			detail?: boolean;
-		},
+		me: { id: MiUser['id'] },
 	) {
-		return Promise.all(roles.map(x => this.pack(x, me, options)));
+		return Promise.all(roles.map(x => this.pack(x, me)));
 	}
 }
 

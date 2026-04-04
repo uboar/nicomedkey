@@ -1,40 +1,46 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div v-if="hasDisconnected && $store.state.serverDisconnectedBehavior === 'quiet'" :class="$style.root" class="_panel _shadow" @click="resetDisconnected">
+<div v-if="hasDisconnected && prefer.s.serverDisconnectedBehavior === 'quiet'" :class="$style.root" class="_panel _shadow" @click="resetDisconnected">
 	<div><i class="ti ti-alert-triangle"></i> {{ i18n.ts.disconnectedFromServer }}</div>
 	<div :class="$style.command" class="_buttons">
-		<MkButton :class="$style.commandButton" small primary @click="reload">{{ i18n.ts.reload }}</MkButton>
-		<MkButton :class="$style.commandButton" small>{{ i18n.ts.doNothing }}</MkButton>
+		<MkButton small primary @click="reload">{{ i18n.ts.reload }}</MkButton>
+		<MkButton small>{{ i18n.ts.doNothing }}</MkButton>
 	</div>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { onUnmounted } from 'vue';
-import { stream } from '@/stream';
-import { i18n } from '@/i18n';
+import { onUnmounted, ref } from 'vue';
+import { useStream } from '@/stream.js';
+import { i18n } from '@/i18n.js';
 import MkButton from '@/components/MkButton.vue';
-import * as os from '@/os';
+import * as os from '@/os.js';
+import { prefer } from '@/preferences.js';
 
 const zIndex = os.claimZIndex('high');
 
-let hasDisconnected = $ref(false);
+const hasDisconnected = ref(false);
 
 function onDisconnected() {
-	hasDisconnected = true;
+	hasDisconnected.value = true;
 }
 
 function resetDisconnected() {
-	hasDisconnected = false;
+	hasDisconnected.value = false;
 }
 
 function reload() {
-	location.reload();
+	window.location.reload();
 }
 
-stream.on('_disconnected_', onDisconnected);
+useStream().on('_disconnected_', onDisconnected);
 
 onUnmounted(() => {
-	stream.off('_disconnected_', onDisconnected);
+	useStream().off('_disconnected_', onDisconnected);
 });
 </script>
 
@@ -42,8 +48,8 @@ onUnmounted(() => {
 .root {
 	position: fixed;
 	z-index: v-bind(zIndex);
-	bottom: calc(var(--minBottomSpacing) + var(--margin));
-	right: var(--margin);
+	bottom: calc(var(--MI-minBottomSpacing) + var(--MI-margin));
+	right: var(--MI-margin);
 	margin: 0;
 	padding: 12px;
 	font-size: 0.9em;
@@ -52,8 +58,5 @@ onUnmounted(() => {
 
 .command {
 	margin-top: 8px;
-}
-
-.commandButton {
 }
 </style>

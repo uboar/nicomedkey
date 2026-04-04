@@ -61,11 +61,10 @@ smtpPass: "ಗುಪ್ತಪದ"
 user: "ಬಳಕೆದಾರ"
 searchByGoogle: "ಹುಡುಕು"
 file: "ಕಡತಗಳು"
+replies: "ಉತ್ತರಿಸು"
 _email:
   _follow:
     title: "ಹಿಂಬಾಲಿಸಿದರು"
-_mfm:
-  search: "ಹುಡುಕು"
 _sfx:
   notification: "ಅಧಿಸೂಚನೆಗಳು"
 _widgets:
@@ -78,6 +77,8 @@ _profile:
   username: "ಬಳಕೆಹೆಸರು"
 _notification:
   youWereFollowed: "ಹಿಂಬಾಲಿಸಿದರು"
+  _types:
+    login: "ಪ್ರವೇಶ"
   _actions:
     reply: "ಉತ್ತರಿಸು"
 _deck:

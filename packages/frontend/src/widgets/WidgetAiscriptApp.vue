@@ -1,5 +1,10 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkContainer :show-header="widgetProps.showHeader" class="mkw-aiscriptApp">
+<MkContainer :showHeader="widgetProps.showHeader" class="mkw-aiscriptApp">
 	<template #header>App</template>
 	<div :class="$style.root">
 		<MkAsUi v-if="root" :component="root" :components="components" size="small"/>
@@ -8,16 +13,19 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, Ref, ref, watch } from 'vue';
-import { Interpreter, Parser, utils, values } from '@syuilo/aiscript';
-import { useWidgetPropsManager, Widget, WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget';
-import { GetFormResultType } from '@/scripts/form';
-import * as os from '@/os';
-import { createAiScriptEnv } from '@/scripts/aiscript/api';
-import { $i } from '@/account';
+import { onMounted, ref, watch } from 'vue';
+import type { Ref } from 'vue';
+import { Interpreter, Parser } from '@syuilo/aiscript';
+import { useWidgetPropsManager } from './widget.js';
+import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
+import type { GetFormResultType } from '@/utility/form.js';
+import * as os from '@/os.js';
+import { aiScriptReadline, createAiScriptEnv } from '@/aiscript/api.js';
+import { $i } from '@/i.js';
 import MkAsUi from '@/components/MkAsUi.vue';
 import MkContainer from '@/components/MkContainer.vue';
-import { AsUiComponent, AsUiRoot, patch, registerAsUiLib, render } from '@/scripts/aiscript/ui';
+import { registerAsUiLib } from '@/aiscript/ui.js';
+import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
 
 const name = 'aiscriptApp';
 
@@ -35,11 +43,8 @@ const widgetPropsDef = {
 
 type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 
-// 現時点ではvueの制限によりimportしたtypeをジェネリックに渡せない
-//const props = defineProps<WidgetComponentProps<WidgetProps>>();
-//const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
-const props = defineProps<{ widget?: Widget<WidgetProps>; }>();
-const emit = defineEmits<{ (ev: 'updateProps', props: WidgetProps); }>();
+const props = defineProps<WidgetComponentProps<WidgetProps>>();
+const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
 const { widgetProps, configure } = useWidgetPropsManager(name,
 	widgetPropsDef,
@@ -50,7 +55,7 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 const parser = new Parser();
 
 const root = ref<AsUiRoot>();
-const components: Ref<AsUiComponent>[] = $ref([]);
+const components = ref<Ref<AsUiComponent>[]>([]);
 
 async function run() {
 	const aiscript = new Interpreter({
@@ -58,19 +63,11 @@ async function run() {
 			storageKey: 'widget',
 			token: $i?.token,
 		}),
-		...registerAsUiLib(components, (_root) => {
+		...registerAsUiLib(components.value, (_root) => {
 			root.value = _root.value;
 		}),
 	}, {
-		in: (q) => {
-			return new Promise(ok => {
-				os.inputText({
-					title: q,
-				}).then(({ canceled, result: a }) => {
-					ok(a);
-				});
-			});
-		},
+		in: aiScriptReadline,
 		out: (value) => {
 			// nop
 		},

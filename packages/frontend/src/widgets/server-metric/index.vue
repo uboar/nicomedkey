@@ -1,10 +1,15 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkContainer :show-header="widgetProps.showHeader" :naked="widgetProps.transparent">
+<MkContainer :showHeader="widgetProps.showHeader" :naked="widgetProps.transparent">
 	<template #icon><i class="ti ti-server"></i></template>
 	<template #header>{{ i18n.ts._widgets.serverMetric }}</template>
 	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="toggleView()"><i class="ti ti-selector"></i></button></template>
 
-	<div v-if="meta" class="mkw-serverMetric data-cy-mkw-serverMetric">
+	<div v-if="meta" data-cy-mkw-serverMetric class="mkw-serverMetric">
 		<XCpuMemory v-if="widgetProps.view === 0" :connection="connection" :meta="meta"/>
 		<XNet v-else-if="widgetProps.view === 1" :connection="connection" :meta="meta"/>
 		<XCpu v-else-if="widgetProps.view === 2" :connection="connection" :meta="meta"/>
@@ -15,18 +20,20 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useWidgetPropsManager, Widget, WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from '../widget';
+import { onUnmounted, ref } from 'vue';
+import * as Misskey from 'misskey-js';
+import { useWidgetPropsManager } from '../widget.js';
+import type { WidgetComponentProps, WidgetComponentEmits, WidgetComponentExpose } from '../widget.js';
 import XCpuMemory from './cpu-mem.vue';
 import XNet from './net.vue';
 import XCpu from './cpu.vue';
 import XMemory from './mem.vue';
 import XDisk from './disk.vue';
 import MkContainer from '@/components/MkContainer.vue';
-import { GetFormResultType } from '@/scripts/form';
-import * as os from '@/os';
-import { stream } from '@/stream';
-import { i18n } from '@/i18n';
+import type { GetFormResultType } from '@/utility/form.js';
+import { misskeyApiGet } from '@/utility/misskey-api.js';
+import { useStream } from '@/stream.js';
+import { i18n } from '@/i18n.js';
 
 const name = 'serverMetric';
 
@@ -48,11 +55,8 @@ const widgetPropsDef = {
 
 type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 
-// 現時点ではvueの制限によりimportしたtypeをジェネリックに渡せない
-//const props = defineProps<WidgetComponentProps<WidgetProps>>();
-//const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
-const props = defineProps<{ widget?: Widget<WidgetProps>; }>();
-const emit = defineEmits<{ (ev: 'updateProps', props: WidgetProps); }>();
+const props = defineProps<WidgetComponentProps<WidgetProps>>();
+const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
 const { widgetProps, configure, save } = useWidgetPropsManager(name,
 	widgetPropsDef,
@@ -60,9 +64,9 @@ const { widgetProps, configure, save } = useWidgetPropsManager(name,
 	emit,
 );
 
-const meta = ref(null);
+const meta = ref<Misskey.entities.ServerInfoResponse | null>(null);
 
-os.api('server-info', {}).then(res => {
+misskeyApiGet('server-info', {}).then(res => {
 	meta.value = res;
 });
 
@@ -75,7 +79,7 @@ const toggleView = () => {
 	save();
 };
 
-const connection = stream.useChannel('serverStats');
+const connection = useStream().useChannel('serverStats');
 onUnmounted(() => {
 	connection.dispose();
 });

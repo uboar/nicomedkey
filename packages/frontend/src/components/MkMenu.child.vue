@@ -1,22 +1,24 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div ref="el" class="sfhdhdhr">
-	<MkMenu ref="menu" :items="items" :align="align" :width="width" :as-drawer="false" @close="onChildClosed"/>
+<div ref="el" :class="$style.root">
+	<MkMenu :items="items" :align="align" :width="width" :asDrawer="false" @close="onChildClosed"/>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { on } from 'events';
-import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, provide, useTemplateRef, watch } from 'vue';
 import MkMenu from './MkMenu.vue';
-import { MenuItem } from '@/types/menu';
-import * as os from '@/os';
+import type { MenuItem } from '@/types/menu.js';
 
 const props = defineProps<{
 	items: MenuItem[];
 	targetElement: HTMLElement;
 	rootElement: HTMLElement;
 	width?: number;
-	viaKeyboard?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -24,14 +26,27 @@ const emit = defineEmits<{
 	(ev: 'actioned'): void;
 }>();
 
-const el = shallowRef<HTMLElement>();
+provide('isNestingMenu', true);
+
+const el = useTemplateRef('el');
 const align = 'left';
 
+const SCROLLBAR_THICKNESS = 16;
+
 function setPosition() {
+	if (el.value == null) return;
 	const rootRect = props.rootElement.getBoundingClientRect();
-	const rect = props.targetElement.getBoundingClientRect();
-	const left = props.targetElement.offsetWidth;
-	const top = (rect.top - rootRect.top) - 8;
+	const parentRect = props.targetElement.getBoundingClientRect();
+	const myRect = el.value.getBoundingClientRect();
+
+	let left = props.targetElement.offsetWidth;
+	let top = (parentRect.top - rootRect.top) - 8;
+	if (rootRect.left + left + myRect.width >= (window.innerWidth - SCROLLBAR_THICKNESS)) {
+		left = -myRect.width;
+	}
+	if (rootRect.top + top + myRect.height >= (window.innerHeight - SCROLLBAR_THICKNESS)) {
+		top = top - ((rootRect.top + top + myRect.height) - (window.innerHeight - SCROLLBAR_THICKNESS));
+	}
 	el.value.style.left = left + 'px';
 	el.value.style.top = top + 'px';
 }
@@ -48,22 +63,31 @@ watch(() => props.targetElement, () => {
 	setPosition();
 });
 
+const ro = new ResizeObserver((entries, observer) => {
+	setPosition();
+});
+
 onMounted(() => {
+	if (el.value) ro.observe(el.value);
 	setPosition();
 	nextTick(() => {
 		setPosition();
 	});
 });
 
+onUnmounted(() => {
+	ro.disconnect();
+});
+
 defineExpose({
 	checkHit: (ev: MouseEvent) => {
-		return (ev.target === el.value || el.value.contains(ev.target));
+		return (ev.target === el.value || el.value?.contains(ev.target as Node));
 	},
 });
 </script>
 
-<style lang="scss" scoped>
-.sfhdhdhr {
+<style lang="scss" module>
+.root {
 	position: absolute;
 }
 </style>

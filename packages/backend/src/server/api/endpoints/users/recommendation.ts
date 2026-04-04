@@ -1,6 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import ms from 'ms';
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository, FollowingsRepository } from '@/models/index.js';
+import type { UsersRepository, FollowingsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { QueryService } from '@/core/QueryService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -35,16 +40,15 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
-		
+
 		private userEntityService: UserEntityService,
 		private queryService: QueryService,
 	) {
@@ -59,7 +63,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			this.queryService.generateMutedUserQueryForUsers(query, me);
 			this.queryService.generateBlockQueryForUsers(query, me);
-			this.queryService.generateBlockedUserQuery(query, me);
+			this.queryService.generateBlockedUserQueryForNotes(query, me);
 
 			const followingQuery = this.followingsRepository.createQueryBuilder('following')
 				.select('following.followeeId')
@@ -70,9 +74,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 			query.setParameters(followingQuery.getParameters());
 
-			const users = await query.take(ps.limit).skip(ps.offset).getMany();
+			const users = await query.limit(ps.limit).offset(ps.offset).getMany();
 
-			return await this.userEntityService.packMany(users, me, { detail: true });
+			return await this.userEntityService.packMany(users, me, { schema: 'UserDetailed' });
 		});
 	}
 }

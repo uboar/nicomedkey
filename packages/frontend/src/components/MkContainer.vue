@@ -1,12 +1,17 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div class="_panel" :class="[$style.root, { [$style.naked]: naked, [$style.thin]: thin, [$style.hideHeader]: !showHeader, [$style.scrollable]: scrollable, [$style.closed]: !showBody }]">
-	<header v-if="showHeader" ref="header" :class="$style.header">
+<div ref="rootEl" class="_panel" :class="[$style.root, { [$style.naked]: naked, [$style.thin]: thin, [$style.scrollable]: scrollable }]">
+	<header v-if="showHeader" ref="headerEl" :class="$style.header">
 		<div :class="$style.title">
 			<span :class="$style.titleIcon"><slot name="icon"></slot></span>
 			<slot name="header"></slot>
 		</div>
 		<div :class="$style.headerSub">
-			<slot name="func" :button-style-class="$style.headerButton"></slot>
+			<slot name="func" :buttonStyleClass="$style.headerButton"></slot>
 			<button v-if="foldable" :class="$style.headerButton" class="_button" @click="() => showBody = !showBody">
 				<template v-if="showBody"><i class="ti ti-chevron-up"></i></template>
 				<template v-else><i class="ti ti-chevron-down"></i></template>
@@ -14,124 +19,119 @@
 		</div>
 	</header>
 	<Transition
-		:enter-active-class="$store.state.animation ? $style.transition_toggle_enterActive : ''"
-		:leave-active-class="$store.state.animation ? $style.transition_toggle_leaveActive : ''"
-		:enter-from-class="$store.state.animation ? $style.transition_toggle_enterFrom : ''"
-		:leave-to-class="$store.state.animation ? $style.transition_toggle_leaveTo : ''"
+		:enterActiveClass="prefer.s.animation ? $style.transition_toggle_enterActive : ''"
+		:leaveActiveClass="prefer.s.animation ? $style.transition_toggle_leaveActive : ''"
+		:enterFromClass="prefer.s.animation ? $style.transition_toggle_enterFrom : ''"
+		:leaveToClass="prefer.s.animation ? $style.transition_toggle_leaveTo : ''"
 		@enter="enter"
-		@after-enter="afterEnter"
+		@afterEnter="afterEnter"
 		@leave="leave"
-		@after-leave="afterLeave"
+		@afterLeave="afterLeave"
 	>
-		<div v-show="showBody" ref="content" :class="[$style.content, { [$style.omitted]: omitted }]">
+		<div v-show="showBody" ref="contentEl" :class="[$style.content, { [$style.omitted]: omitted }]">
 			<slot></slot>
-			<button v-if="omitted" :class="$style.fade" class="_button" @click="() => { ignoreOmit = true; omitted = false; }">
-				<span :class="$style.fadeLabel">{{ $ts.showMore }}</span>
+			<button v-if="omitted" :class="$style.fade" class="_button" @click="showMore">
+				<span :class="$style.fadeLabel">{{ i18n.ts.showMore }}</span>
 			</button>
 		</div>
 	</Transition>
 </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script lang="ts" setup>
+import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
+import { prefer } from '@/preferences.js';
+import { i18n } from '@/i18n.js';
 
-export default defineComponent({
-	props: {
-		showHeader: {
-			type: Boolean,
-			required: false,
-			default: true,
-		},
-		thin: {
-			type: Boolean,
-			required: false,
-			default: false,
-		},
-		naked: {
-			type: Boolean,
-			required: false,
-			default: false,
-		},
-		foldable: {
-			type: Boolean,
-			required: false,
-			default: false,
-		},
-		expanded: {
-			type: Boolean,
-			required: false,
-			default: true,
-		},
-		scrollable: {
-			type: Boolean,
-			required: false,
-			default: false,
-		},
-		maxHeight: {
-			type: Number,
-			required: false,
-			default: null,
-		},
-	},
-	data() {
-		return {
-			showBody: this.expanded,
-			omitted: null,
-			ignoreOmit: false,
-		};
-	},
-	mounted() {
-		this.$watch('showBody', showBody => {
-			const headerHeight = this.showHeader ? this.$refs.header.offsetHeight : 0;
-			this.$el.style.minHeight = `${headerHeight}px`;
-			if (showBody) {
-				this.$el.style.flexBasis = 'auto';
-			} else {
-				this.$el.style.flexBasis = `${headerHeight}px`;
-			}
-		}, {
-			immediate: true,
-		});
+const props = withDefaults(defineProps<{
+	showHeader?: boolean;
+	thin?: boolean;
+	naked?: boolean;
+	foldable?: boolean;
+	onUnfold?: () => boolean; // return false to prevent unfolding
+	scrollable?: boolean;
+	expanded?: boolean;
+	maxHeight?: number | null;
+}>(), {
+	expanded: true,
+	showHeader: true,
+	maxHeight: null,
+});
 
-		this.$el.style.setProperty('--maxHeight', this.maxHeight + 'px');
+const rootEl = useTemplateRef('rootEl');
+const contentEl = useTemplateRef('contentEl');
+const headerEl = useTemplateRef('headerEl');
+const showBody = ref(props.expanded);
+const ignoreOmit = ref(false);
+const omitted = ref(false);
 
-		const calcOmit = () => {
-			if (this.omitted || this.ignoreOmit || this.maxHeight == null) return;
-			const height = this.$refs.content.offsetHeight;
-			this.omitted = height > this.maxHeight;
-		};
+function enter(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
+	const elementHeight = el.getBoundingClientRect().height;
+	el.style.height = '0';
+	el.offsetHeight; // reflow
+	el.style.height = `${Math.min(elementHeight, props.maxHeight ?? Infinity)}px`;
+}
 
-		calcOmit();
-		new ResizeObserver((entries, observer) => {
-			calcOmit();
-		}).observe(this.$refs.content);
-	},
-	methods: {
-		toggleContent(show: boolean) {
-			if (!this.foldable) return;
-			this.showBody = show;
-		},
+function afterEnter(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
+	el.style.height = '';
+}
 
-		enter(el) {
-			const elementHeight = el.getBoundingClientRect().height;
-			el.style.height = 0;
-			el.offsetHeight; // reflow
-			el.style.height = elementHeight + 'px';
-		},
-		afterEnter(el) {
-			el.style.height = null;
-		},
-		leave(el) {
-			const elementHeight = el.getBoundingClientRect().height;
-			el.style.height = elementHeight + 'px';
-			el.offsetHeight; // reflow
-			el.style.height = 0;
-		},
-		afterLeave(el) {
-			el.style.height = null;
-		},
-	},
+function leave(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
+	const elementHeight = el.getBoundingClientRect().height;
+	el.style.height = `${elementHeight}px`;
+	el.offsetHeight; // reflow
+	el.style.height = '0';
+}
+
+function afterLeave(el: Element) {
+	if (!(el instanceof HTMLElement)) return;
+	el.style.height = '';
+}
+
+const calcOmit = () => {
+	if (omitted.value || ignoreOmit.value || props.maxHeight == null) return;
+	if (!contentEl.value) return;
+	const height = contentEl.value.offsetHeight;
+	omitted.value = height > props.maxHeight;
+};
+
+const omitObserver = new ResizeObserver((entries, observer) => {
+	calcOmit();
+});
+
+function showMore() {
+	if (props.onUnfold && !props.onUnfold()) return;
+
+	ignoreOmit.value = true;
+	omitted.value = false;
+}
+
+onMounted(() => {
+	watch(showBody, v => {
+		if (!rootEl.value) return;
+		const headerHeight = props.showHeader ? headerEl.value?.offsetHeight ?? 0 : 0;
+		rootEl.value.style.minHeight = `${headerHeight}px`;
+		if (v) {
+			rootEl.value.style.flexBasis = 'auto';
+		} else {
+			rootEl.value.style.flexBasis = `${headerHeight}px`;
+		}
+	}, {
+		immediate: true,
+	});
+
+	if (rootEl.value) rootEl.value.style.setProperty('--maxHeight', props.maxHeight + 'px');
+
+	calcOmit();
+
+	if (contentEl.value) omitObserver.observe(contentEl.value);
+});
+
+onUnmounted(() => {
+	omitObserver.disconnect();
 });
 </script>
 
@@ -177,13 +177,18 @@ export default defineComponent({
 
 .header {
 	position: sticky;
-	top: var(--stickyTop, 0px);
+	top: var(--MI-stickyTop, 0px);
 	left: 0;
-	color: var(--panelHeaderFg);
-	background: var(--panelHeaderBg);
-	border-bottom: solid 0.5px var(--panelHeaderDivider);
+	color: var(--MI_THEME-panelHeaderFg);
+	background: var(--MI_THEME-panelHeaderBg);
 	z-index: 2;
 	line-height: 1.4em;
+}
+
+@container style(--MI_THEME-panelHeaderBg: var(--MI_THEME-panel)) {
+	.header {
+		box-shadow: 0 0.5px 0 0 light-dark(#0002, #fff2);
+	}
 }
 
 .title {
@@ -213,7 +218,15 @@ export default defineComponent({
 }
 
 .content {
-	--stickyTop: 0px;
+	--MI-stickyTop: 0px;
+
+	/*
+	理屈は知らないけど、ここでbackgroundを設定しておかないと
+	スクロールコンテナーが少なくともChromeにおいて
+	main thread scrolling になってしまい、パフォーマンスが(多分)落ちる。
+	backgroundが透明だと裏側を描画しないといけなくなるとかそういう理由かもしれない
+	*/
+	background: var(--MI_THEME-panel);
 
 	&.omitted {
 		position: relative;
@@ -228,11 +241,11 @@ export default defineComponent({
 			left: 0;
 			width: 100%;
 			height: 64px;
-			background: linear-gradient(0deg, var(--panel), var(--X15));
+			background: linear-gradient(0deg, var(--MI_THEME-panel), color(from var(--MI_THEME-panel) srgb r g b / 0));
 
 			> .fadeLabel {
 				display: inline-block;
-				background: var(--panel);
+				background: var(--MI_THEME-panel);
 				padding: 6px 10px;
 				font-size: 0.8em;
 				border-radius: 999px;
@@ -241,7 +254,7 @@ export default defineComponent({
 
 			&:hover {
 				> .fadeLabel {
-					background: var(--panelHighlight);
+					background: var(--MI_THEME-panelHighlight);
 				}
 			}
 		}

@@ -1,17 +1,21 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, FollowingsRepository } from '@/models/index.js';
+import type { NotesRepository, FollowingsRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { MetaService } from '@/core/MetaService.js';
-import { NoteReadService } from '@/core/NoteReadService.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
 	tags: ['notes'],
 
 	requireCredential: true,
+	kind: 'read:account',
 
 	res: {
 		type: 'array',
@@ -36,9 +40,8 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
@@ -48,7 +51,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 		private noteEntityService: NoteEntityService,
 		private queryService: QueryService,
-		private noteReadService: NoteReadService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const followingQuery = this.followingsRepository.createQueryBuilder('following')
@@ -56,26 +58,23 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				.where('following.followerId = :followerId', { followerId: me.id });
 
 			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
-				.andWhere(new Brackets(qb => { qb
-					.where(`'{"${me.id}"}' <@ note.mentions`)
-					.orWhere(`'{"${me.id}"}' <@ note.visibleUserIds`);
+				.andWhere(new Brackets(qb => {
+					qb // このmeIdAsListパラメータはqueryServiceのgenerateVisibilityQueryでセットされる
+						.where(':meIdAsList <@ note.mentions')
+						.orWhere(':meIdAsList <@ note.visibleUserIds');
 				}))
+				// Avoid scanning primary key index
+				.orderBy('CONCAT(note.id)', 'DESC')
 				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('user.avatar', 'avatar')
-				.leftJoinAndSelect('user.banner', 'banner')
 				.leftJoinAndSelect('note.reply', 'reply')
 				.leftJoinAndSelect('note.renote', 'renote')
 				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('replyUser.avatar', 'replyUserAvatar')
-				.leftJoinAndSelect('replyUser.banner', 'replyUserBanner')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.leftJoinAndSelect('renoteUser.avatar', 'renoteUserAvatar')
-				.leftJoinAndSelect('renoteUser.banner', 'renoteUserBanner');
+				.leftJoinAndSelect('renote.user', 'renoteUser');
 
 			this.queryService.generateVisibilityQuery(query, me);
-			this.queryService.generateMutedUserQuery(query, me);
+			this.queryService.generateMutedUserQueryForNotes(query, me);
 			this.queryService.generateMutedNoteThreadQuery(query, me);
-			this.queryService.generateBlockedUserQuery(query, me);
+			this.queryService.generateBlockedUserQueryForNotes(query, me);
 
 			if (ps.visibility) {
 				query.andWhere('note.visibility = :visibility', { visibility: ps.visibility });
@@ -86,9 +85,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				query.setParameters(followingQuery.getParameters());
 			}
 
-			const mentions = await query.take(ps.limit).getMany();
-
-			this.noteReadService.read(me.id, mentions);
+			const mentions = await query.limit(ps.limit).getMany();
 
 			return await this.noteEntityService.packMany(mentions, me);
 		});

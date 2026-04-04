@@ -1,22 +1,24 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader/></template>
-	<MkSpacer :content-max="800">
+<PageWithHeader>
+	<MkSpacer :contentMax="800">
 		<MkClickerGame/>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
 import MkClickerGame from '@/components/MkClickerGame.vue';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import { definePage } from '@/page.js';
 
-definePageMetadata({
+definePage(() => ({
 	title: '🍪👈',
 	icon: 'ti ti-cookie',
-});
+}));
 </script>
 
 <style lang="scss" module>

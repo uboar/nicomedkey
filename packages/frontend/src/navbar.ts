@@ -1,11 +1,18 @@
-import { computed, ref, reactive } from 'vue';
-import { $i } from './account';
-import { miLocalStorage } from './local-storage';
-import { search } from '@/scripts/search';
-import * as os from '@/os';
-import { i18n } from '@/i18n';
-import { ui } from '@/config';
-import { unisonReload } from '@/scripts/unison-reload';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { computed, reactive } from 'vue';
+import { ui } from '@@/js/config.js';
+import { clearCache } from './utility/clear-cache.js';
+import { $i } from '@/i.js';
+import { miLocalStorage } from '@/local-storage.js';
+import { openInstanceMenu, openToolsMenu } from '@/ui/_common_/common.js';
+import { lookup } from '@/utility/lookup.js';
+import * as os from '@/os.js';
+import { i18n } from '@/i18n.js';
+import { unisonReload } from '@/utility/unison-reload.js';
 
 export const navbarItemDef = reactive({
 	notifications: {
@@ -13,14 +20,16 @@ export const navbarItemDef = reactive({
 		icon: 'ti ti-bell',
 		show: computed(() => $i != null),
 		indicated: computed(() => $i != null && $i.hasUnreadNotification),
+		indicateValue: computed(() => {
+			if (!$i || $i.unreadNotificationsCount === 0) return '';
+
+			if ($i.unreadNotificationsCount > 99) {
+				return '99+';
+			} else {
+				return $i.unreadNotificationsCount.toString();
+			}
+		}),
 		to: '/my/notifications',
-	},
-	messaging: {
-		title: i18n.ts.messaging,
-		icon: 'ti ti-messages',
-		show: computed(() => $i != null),
-		indicated: computed(() => $i != null && $i.hasUnreadMessagingMessage),
-		to: '/my/messaging',
 	},
 	drive: {
 		title: i18n.ts.drive,
@@ -31,7 +40,6 @@ export const navbarItemDef = reactive({
 	followRequests: {
 		title: i18n.ts.followRequests,
 		icon: 'ti ti-user-plus',
-		show: computed(() => $i != null && $i.isLocked),
 		indicated: computed(() => $i != null && $i.hasPendingReceivedFollowRequest),
 		to: '/my/follow-requests',
 	},
@@ -49,7 +57,14 @@ export const navbarItemDef = reactive({
 	search: {
 		title: i18n.ts.search,
 		icon: 'ti ti-search',
-		action: () => search(),
+		to: '/search',
+	},
+	lookup: {
+		title: i18n.ts.lookup,
+		icon: 'ti ti-world-search',
+		action: (ev) => {
+			lookup();
+		},
 	},
 	lists: {
 		title: i18n.ts.lists,
@@ -57,14 +72,6 @@ export const navbarItemDef = reactive({
 		show: computed(() => $i != null),
 		to: '/my/lists',
 	},
-	/*
-	groups: {
-		title: i18n.ts.groups,
-		icon: 'ti ti-users',
-		show: computed(() => $i != null),
-		to: '/my/groups',
-	},
-	*/
 	antennas: {
 		title: i18n.ts.antennas,
 		icon: 'ti ti-antenna',
@@ -103,16 +110,28 @@ export const navbarItemDef = reactive({
 		icon: 'ti ti-device-tv',
 		to: '/channels',
 	},
+	chat: {
+		title: i18n.ts.chat,
+		icon: 'ti ti-messages',
+		to: '/chat',
+		show: computed(() => $i != null && $i.policies.chatAvailability !== 'unavailable'),
+		indicated: computed(() => $i != null && $i.hasUnreadChatMessages),
+	},
 	achievements: {
 		title: i18n.ts.achievements,
 		icon: 'ti ti-medal',
 		show: computed(() => $i != null),
 		to: '/my/achievements',
 	},
+	games: {
+		title: 'Misskey Games',
+		icon: 'ti ti-device-gamepad',
+		to: '/games',
+	},
 	ui: {
 		title: i18n.ts.switchUi,
 		icon: 'ti ti-devices',
-		action: (ev) => {
+		action: (ev: MouseEvent) => {
 			os.popupMenu([{
 				text: i18n.ts.default,
 				active: ui === 'default' || ui === null,
@@ -127,21 +146,41 @@ export const navbarItemDef = reactive({
 					miLocalStorage.setItem('ui', 'deck');
 					unisonReload();
 				},
-			}, {
-				text: i18n.ts.classic,
-				active: ui === 'classic',
-				action: () => {
-					miLocalStorage.setItem('ui', 'classic');
-					unisonReload();
-				},
 			}], ev.currentTarget ?? ev.target);
+		},
+	},
+	about: {
+		title: i18n.ts.about,
+		icon: 'ti ti-info-circle',
+		action: (ev) => {
+			openInstanceMenu(ev);
+		},
+	},
+	tools: {
+		title: i18n.ts.tools,
+		icon: 'ti ti-tool',
+		action: (ev) => {
+			openToolsMenu(ev);
 		},
 	},
 	reload: {
 		title: i18n.ts.reload,
 		icon: 'ti ti-refresh',
 		action: (ev) => {
-			location.reload();
+			window.location.reload();
+		},
+	},
+	profile: {
+		title: i18n.ts.profile,
+		icon: 'ti ti-user',
+		show: computed(() => $i != null),
+		to: `/@${$i?.username}`,
+	},
+	cacheClear: {
+		title: i18n.ts.clearCache,
+		icon: 'ti ti-trash',
+		action: (ev) => {
+			clearCache();
 		},
 	},
 });

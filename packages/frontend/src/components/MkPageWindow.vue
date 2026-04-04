@@ -1,63 +1,70 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <MkWindow
 	ref="windowEl"
-	:initial-width="500"
-	:initial-height="500"
-	:can-resize="true"
-	:close-button="true"
-	:buttons-left="buttonsLeft"
-	:buttons-right="buttonsRight"
+	:initialWidth="500"
+	:initialHeight="500"
+	:canResize="true"
+	:closeButton="true"
+	:buttonsLeft="buttonsLeft"
+	:buttonsRight="buttonsRight"
 	:contextmenu="contextmenu"
-	@closed="$emit('closed')"
+	@closed="emit('closed')"
 >
 	<template #header>
-		<template v-if="pageMetadata?.value">
-			<i v-if="pageMetadata.value.icon" class="icon" :class="pageMetadata.value.icon" style="margin-right: 0.5em;"></i>
-			<span>{{ pageMetadata.value.title }}</span>
+		<template v-if="pageMetadata">
+			<i v-if="pageMetadata.icon" :class="pageMetadata.icon" style="margin-right: 0.5em;"></i>
+			<span>{{ pageMetadata.title }}</span>
 		</template>
 	</template>
 
-	<div :class="$style.root" :style="{ background: pageMetadata?.value?.bg }" style="container-type: inline-size;">
-		<RouterView :router="router"/>
+	<div :class="$style.root">
+		<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" :key="reloadCount" :router="windowRouter"/>
+		<RouterView v-else :key="reloadCount" :router="windowRouter"/>
 	</div>
 </MkWindow>
 </template>
 
 <script lang="ts" setup>
-import { ComputedRef, inject, onMounted, onUnmounted, provide } from 'vue';
+import { computed, onMounted, onUnmounted, provide, ref, useTemplateRef } from 'vue';
+import { url } from '@@/js/config.js';
+import type { PageMetadata } from '@/page.js';
 import RouterView from '@/components/global/RouterView.vue';
 import MkWindow from '@/components/MkWindow.vue';
-import { popout as _popout } from '@/scripts/popout';
-import copyToClipboard from '@/scripts/copy-to-clipboard';
-import { url } from '@/config';
-import * as os from '@/os';
-import { mainRouter, routes } from '@/router';
-import { Router } from '@/nirax';
-import { i18n } from '@/i18n';
-import { PageMetadata, provideMetadataReceiver, setPageMetadata } from '@/scripts/page-metadata';
-import { openingWindowsCount } from '@/os';
-import { claimAchievement } from '@/scripts/achievements';
+import { popout as _popout } from '@/utility/popout.js';
+import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import { i18n } from '@/i18n.js';
+import { provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
+import { openingWindowsCount } from '@/os.js';
+import { claimAchievement } from '@/utility/achievements.js';
+import { createRouter, mainRouter } from '@/router.js';
+import { analytics } from '@/analytics.js';
+import { DI } from '@/di.js';
+import { prefer } from '@/preferences.js';
 
 const props = defineProps<{
 	initialPath: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const router = new Router(routes, props.initialPath);
+const windowRouter = createRouter(props.initialPath);
 
-let pageMetadata = $ref<null | ComputedRef<PageMetadata>>();
-let windowEl = $shallowRef<InstanceType<typeof MkWindow>>();
-const history = $ref<{ path: string; key: any; }[]>([{
-	path: router.getCurrentPath(),
-	key: router.getCurrentKey(),
+const pageMetadata = ref<null | PageMetadata>(null);
+const windowEl = useTemplateRef('windowEl');
+const history = ref<{ path: string; }[]>([{
+	path: windowRouter.getCurrentFullPath(),
 }]);
-const buttonsLeft = $computed(() => {
-	const buttons = [];
+const buttonsLeft = computed(() => {
+	const buttons: Record<string, unknown>[] = [];
 
-	if (history.length > 1) {
+	if (history.value.length > 1) {
 		buttons.push({
 			icon: 'ti ti-arrow-left',
 			onClick: back,
@@ -66,8 +73,12 @@ const buttonsLeft = $computed(() => {
 
 	return buttons;
 });
-const buttonsRight = $computed(() => {
+const buttonsRight = computed(() => {
 	const buttons = [{
+		icon: 'ti ti-reload',
+		title: i18n.ts.reload,
+		onClick: reload,
+	}, {
 		icon: 'ti ti-player-eject',
 		title: i18n.ts.showInPage,
 		onClick: expand,
@@ -75,20 +86,48 @@ const buttonsRight = $computed(() => {
 
 	return buttons;
 });
+const reloadCount = ref(0);
 
-router.addListener('push', ctx => {
-	history.push({ path: ctx.path, key: ctx.key });
+function getSearchMarker(path: string) {
+	const hash = path.split('#')[1];
+	if (hash == null) return null;
+	return hash;
+}
+
+const searchMarkerId = ref<string | null>(getSearchMarker(props.initialPath));
+
+windowRouter.addListener('push', ctx => {
+	history.value.push({ path: ctx.fullPath });
 });
 
-provide('router', router);
-provideMetadataReceiver((info) => {
-	pageMetadata = info;
+windowRouter.addListener('replace', ctx => {
+	history.value.pop();
+	history.value.push({ path: ctx.fullPath });
 });
+
+windowRouter.addListener('change', ctx => {
+	if (_DEV_) console.log('windowRouter: change', ctx.fullPath);
+	searchMarkerId.value = getSearchMarker(ctx.fullPath);
+	analytics.page({
+		path: ctx.fullPath,
+		title: ctx.fullPath,
+	});
+});
+
+windowRouter.init();
+
+provide(DI.router, windowRouter);
+provide(DI.inAppSearchMarkerId, searchMarkerId);
+provideMetadataReceiver((metadataGetter) => {
+	const info = metadataGetter();
+	pageMetadata.value = info;
+});
+provideReactiveMetadata(pageMetadata);
 provide('shouldOmitHeaderTitle', true);
 provide('shouldHeaderThin', true);
-provide('forceSpacerMin', true);
+provide(DI.forceSpacerMin, true);
 
-const contextmenu = $computed(() => ([{
+const contextmenu = computed(() => ([{
 	icon: 'ti ti-player-eject',
 	text: i18n.ts.showInPage,
 	action: expand,
@@ -100,37 +139,46 @@ const contextmenu = $computed(() => ([{
 	icon: 'ti ti-external-link',
 	text: i18n.ts.openInNewTab,
 	action: () => {
-		window.open(url + router.getCurrentPath(), '_blank');
-		windowEl.close();
+		window.open(url + windowRouter.getCurrentFullPath(), '_blank', 'noopener');
+		windowEl.value?.close();
 	},
 }, {
 	icon: 'ti ti-link',
 	text: i18n.ts.copyLink,
 	action: () => {
-		copyToClipboard(url + router.getCurrentPath());
+		copyToClipboard(url + windowRouter.getCurrentFullPath());
 	},
 }]));
 
 function back() {
-	history.pop();
-	router.replace(history[history.length - 1].path, history[history.length - 1].key);
+	history.value.pop();
+	windowRouter.replace(history.value.at(-1)!.path);
+}
+
+function reload() {
+	reloadCount.value++;
 }
 
 function close() {
-	windowEl.close();
+	windowEl.value?.close();
 }
 
 function expand() {
-	mainRouter.push(router.getCurrentPath(), 'forcePage');
-	windowEl.close();
+	mainRouter.push(windowRouter.getCurrentFullPath(), 'forcePage');
+	windowEl.value?.close();
 }
 
 function popout() {
-	_popout(router.getCurrentPath(), windowEl.$el);
-	windowEl.close();
+	_popout(windowRouter.getCurrentFullPath(), windowEl.value?.$el);
+	windowEl.value?.close();
 }
 
 onMounted(() => {
+	analytics.page({
+		path: props.initialPath,
+		title: props.initialPath,
+	});
+
 	openingWindowsCount.value++;
 	if (openingWindowsCount.value >= 3) {
 		claimAchievement('open3windows');
@@ -148,9 +196,9 @@ defineExpose({
 
 <style lang="scss" module>
 .root {
-	min-height: 100%;
-	background: var(--bg);
+	height: 100%;
+	background: var(--MI_THEME-bg);
 
-	--margin: var(--marginHalf);
+	--MI-margin: var(--MI-marginHalf);
 }
 </style>

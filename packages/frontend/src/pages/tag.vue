@@ -1,16 +1,33 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="800">
-		<XNotes class="" :pagination="pagination"/>
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="800">
+		<MkNotes ref="notes" class="" :pagination="pagination"/>
 	</MkSpacer>
-</MkStickyContainer>
+	<template v-if="$i" #footer>
+		<div :class="$style.footer">
+			<MkSpacer :contentMax="800" :marginMin="16" :marginMax="16">
+				<MkButton rounded primary :class="$style.button" @click="post()"><i class="ti ti-pencil"></i>{{ i18n.ts.postToHashtag }}</MkButton>
+			</MkSpacer>
+		</div>
+	</template>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
-import XNotes from '@/components/MkNotes.vue';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import { computed, ref } from 'vue';
+import MkNotes from '@/components/MkNotes.vue';
+import MkButton from '@/components/MkButton.vue';
+import { definePage } from '@/page.js';
+import { i18n } from '@/i18n.js';
+import { $i } from '@/i.js';
+import { store } from '@/store.js';
+import * as os from '@/os.js';
+import { genEmbedCode } from '@/utility/get-embed-code.js';
 
 const props = defineProps<{
 	tag: string;
@@ -23,13 +40,49 @@ const pagination = {
 		tag: props.tag,
 	})),
 };
+const notes = ref<InstanceType<typeof MkNotes>>();
 
-const headerActions = $computed(() => []);
+async function post() {
+	store.set('postFormHashtags', props.tag);
+	store.set('postFormWithHashtags', true);
+	await os.post();
+	store.set('postFormHashtags', '');
+	store.set('postFormWithHashtags', false);
+	notes.value?.pagingComponent?.reload();
+}
 
-const headerTabs = $computed(() => []);
+const headerActions = computed(() => [{
+	icon: 'ti ti-dots',
+	label: i18n.ts.more,
+	handler: (ev: MouseEvent) => {
+		os.popupMenu([{
+			text: i18n.ts.embed,
+			icon: 'ti ti-code',
+			action: () => {
+				genEmbedCode('tags', props.tag);
+			},
+		}], ev.currentTarget ?? ev.target);
+	},
+}]);
 
-definePageMetadata(computed(() => ({
+const headerTabs = computed(() => []);
+
+definePage(() => ({
 	title: props.tag,
 	icon: 'ti ti-hash',
-})));
+}));
 </script>
+
+<style lang="scss" module>
+.footer {
+	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
+	backdrop-filter: var(--MI-blur, blur(15px));
+	background: color(from var(--MI_THEME-bg) srgb r g b / 0.5);
+	border-top: solid 0.5px var(--MI_THEME-divider);
+	display: flex;
+}
+
+.button {
+	margin: 0 auto;
+}
+</style>

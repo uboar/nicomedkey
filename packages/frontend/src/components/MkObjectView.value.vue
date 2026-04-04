@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div class="igpposuu _monospace">
 	<div v-if="value === null" class="null">null</div>
@@ -28,54 +33,38 @@
 </div>
 </template>
 
-<script lang="ts">
-import { computed, defineComponent, reactive, ref } from 'vue';
-import number from '@/filters/number';
+<script lang="ts" setup>
+import { reactive } from 'vue';
+import number from '@/filters/number.js';
+import XValue from '@/components/MkObjectView.value.vue';
 
-export default defineComponent({
-	name: 'XValue',
+const props = defineProps<{
+	value: unknown;
+}>();
 
-	props: {
-		value: {
-			required: true,
-		},
-	},
+const collapsed = reactive({});
 
-	setup(props) {
-		const collapsed = reactive({});
+if (isObject(props.value)) {
+	for (const key in props.value) {
+		collapsed[key] = collapsable(props.value[key]);
+	}
+}
 
-		if (isObject(props.value)) {
-			for (const key in props.value) {
-				collapsed[key] = collapsable(props.value[key]);
-			}
-		}
+function isObject(v: unknown): v is Record<PropertyKey, unknown> {
+	return typeof v === 'object' && !Array.isArray(v) && v !== null;
+}
 
-		function isObject(v): boolean {
-			return typeof v === 'object' && !Array.isArray(v) && v !== null;
-		}
+function isArray(v: unknown): v is unknown[] {
+	return Array.isArray(v);
+}
 
-		function isArray(v): boolean {
-			return Array.isArray(v);
-		}
+function isEmpty(v: unknown): v is Record<PropertyKey, never> | never[] {
+	return (isArray(v) && v.length === 0) || (isObject(v) && Object.keys(v).length === 0);
+}
 
-		function isEmpty(v): boolean {
-			return (isArray(v) && v.length === 0) || (isObject(v) && Object.keys(v).length === 0);
-		}
-
-		function collapsable(v): boolean {
-			return (isObject(v) || isArray(v)) && !isEmpty(v);
-		}
-
-		return {
-			number,
-			collapsed,
-			isObject,
-			isArray,
-			isEmpty,
-			collapsable,
-		};
-	},
-});
+function collapsable(v: unknown): boolean {
+	return (isObject(v) || isArray(v)) && !isEmpty(v);
+}
 </script>
 
 <style lang="scss" scoped>
@@ -89,7 +78,7 @@ export default defineComponent({
 
 	> .boolean {
 		display: inline;
-		color: var(--codeBoolean);
+		color: var(--MI_THEME-codeBoolean);
 
 		&.true {
 			font-weight: bold;
@@ -102,12 +91,12 @@ export default defineComponent({
 
 	> .string {
 		display: inline;
-		color: var(--codeString);
+		color: var(--MI_THEME-codeString);
 	}
 
 	> .number {
 		display: inline;
-		color: var(--codeNumber);
+		color: var(--MI_THEME-codeNumber);
 	}
 
 	> .array.empty {
@@ -138,7 +127,7 @@ export default defineComponent({
 
 			> .toggle {
 				width: 16px;
-				color: var(--accent);
+				color: var(--MI_THEME-accent);
 				visibility: hidden;
 
 				&.visible {

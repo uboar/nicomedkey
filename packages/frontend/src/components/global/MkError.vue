@@ -1,16 +1,27 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<Transition :name="$store.state.animation ? '_transition_zoom' : ''" appear>
+<Transition :name="prefer.s.animation ? '_transition_zoom' : ''" appear>
 	<div :class="$style.root">
-		<img :class="$style.img" src="https://xn--931a.moe/assets/error.jpg" class="_ghost"/>
+		<img :class="$style.img" :src="serverErrorImageUrl" draggable="false"/>
 		<p :class="$style.text"><i class="ti ti-alert-triangle"></i> {{ i18n.ts.somethingHappened }}</p>
-		<MkButton :class="$style.button" @click="() => $emit('retry')">{{ i18n.ts.retry }}</MkButton>
+		<MkButton :class="$style.button" @click="() => emit('retry')">{{ i18n.ts.retry }}</MkButton>
 	</div>
 </Transition>
 </template>
 
 <script lang="ts" setup>
 import MkButton from '@/components/MkButton.vue';
-import { i18n } from '@/i18n';
+import { i18n } from '@/i18n.js';
+import { prefer } from '@/preferences.js';
+import { serverErrorImageUrl } from '@/instance.js';
+
+const emit = defineEmits<{
+	(ev: 'retry'): void;
+}>();
 </script>
 
 <style lang="scss" module>

@@ -1,17 +1,20 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <canvas ref="chartEl"></canvas>
 </template>
 
 <script lang="ts" setup>
-import { watch, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { onMounted, useTemplateRef } from 'vue';
 import { Chart } from 'chart.js';
-import number from '@/filters/number';
-import * as os from '@/os';
-import { defaultStore } from '@/store';
-import { useChartTooltip } from '@/scripts/use-chart-tooltip';
-import { chartVLine } from '@/scripts/chart-vline';
-import { alpha } from '@/scripts/color';
-import { initChart } from '@/scripts/init-chart';
+import { store } from '@/store.js';
+import { useChartTooltip } from '@/use/use-chart-tooltip.js';
+import { chartVLine } from '@/utility/chart-vline.js';
+import { alpha } from '@/utility/color.js';
+import { initChart } from '@/utility/init-chart.js';
 
 initChart();
 
@@ -19,7 +22,7 @@ const props = defineProps<{
 	type: string;
 }>();
 
-const chartEl = shallowRef<HTMLCanvasElement>(null);
+const chartEl = useTemplateRef('chartEl');
 
 const { handler: externalTooltipHandler } = useChartTooltip();
 
@@ -64,7 +67,7 @@ const color =
 	'?' as never;
 
 onMounted(() => {
-	const vLineColor = defaultStore.state.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+	const vLineColor = store.s.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 
 	chartInstance = new Chart(chartEl.value, {
 		type: 'line',
@@ -134,7 +137,3 @@ defineExpose({
 	pushData,
 });
 </script>
-
-<style lang="scss" scoped>
-
-</style>

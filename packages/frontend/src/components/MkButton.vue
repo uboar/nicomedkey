@@ -1,24 +1,33 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <button
 	v-if="!link"
 	ref="el" class="_button"
-	:class="[$style.root, { [$style.inline]: inline, [$style.primary]: primary, [$style.gradate]: gradate, [$style.danger]: danger, [$style.rounded]: rounded, [$style.full]: full, [$style.small]: small, [$style.large]: large, [$style.asLike]: asLike }]"
+	:class="[$style.root, { [$style.inline]: inline, [$style.primary]: primary, [$style.gradate]: gradate, [$style.danger]: danger, [$style.rounded]: rounded, [$style.full]: full, [$style.small]: small, [$style.large]: large, [$style.transparent]: transparent, [$style.asLike]: asLike, [$style.iconOnly]: iconOnly, [$style.wait]: wait }]"
 	:type="type"
+	:name="name"
+	:value="value"
+	:disabled="disabled || wait"
 	@click="emit('click', $event)"
 	@mousedown="onMousedown"
 >
-	<div ref="ripples" :class="$style.ripples"></div>
+	<div ref="ripples" :class="$style.ripples" :data-children-class="$style.ripple"></div>
 	<div :class="$style.content">
 		<slot></slot>
 	</div>
 </button>
 <MkA
 	v-else class="_button"
-	:class="[$style.root, { [$style.inline]: inline, [$style.primary]: primary, [$style.gradate]: gradate, [$style.danger]: danger, [$style.rounded]: rounded, [$style.full]: full, [$style.small]: small, [$style.large]: large, [$style.asLike]: asLike }]"
-	:to="to"
+	:class="[$style.root, { [$style.inline]: inline, [$style.primary]: primary, [$style.gradate]: gradate, [$style.danger]: danger, [$style.rounded]: rounded, [$style.full]: full, [$style.small]: small, [$style.large]: large, [$style.transparent]: transparent, [$style.asLike]: asLike, [$style.iconOnly]: iconOnly, [$style.wait]: wait }]"
+	:to="to ?? '#'"
+	:behavior="linkBehavior"
 	@mousedown="onMousedown"
 >
-	<div ref="ripples" :class="$style.ripples"></div>
+	<div ref="ripples" :class="$style.ripples" :data-children-class="$style.ripple"></div>
 	<div :class="$style.content">
 		<slot></slot>
 	</div>
@@ -26,9 +35,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, useCssModule } from 'vue';
-
-const $style = useCssModule();
+import { nextTick, onMounted, useTemplateRef } from 'vue';
 
 const props = defineProps<{
 	type?: 'button' | 'submit' | 'reset';
@@ -38,26 +45,32 @@ const props = defineProps<{
 	inline?: boolean;
 	link?: boolean;
 	to?: string;
+	linkBehavior?: null | 'window' | 'browser';
 	autofocus?: boolean;
 	wait?: boolean;
 	danger?: boolean;
 	full?: boolean;
 	small?: boolean;
 	large?: boolean;
+	transparent?: boolean;
 	asLike?: boolean;
+	name?: string;
+	value?: string;
+	disabled?: boolean;
+	iconOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
 	(ev: 'click', payload: MouseEvent): void;
 }>();
 
-let el = $shallowRef<HTMLElement | null>(null);
-let ripples = $shallowRef<HTMLElement | null>(null);
+const el = useTemplateRef('el');
+const ripples = useTemplateRef('ripples');
 
 onMounted(() => {
 	if (props.autofocus) {
 		nextTick(() => {
-			el!.focus();
+			el.value!.focus();
 		});
 	}
 });
@@ -79,12 +92,12 @@ function onMousedown(evt: MouseEvent): void {
 	const target = evt.target! as HTMLElement;
 	const rect = target.getBoundingClientRect();
 
-	const ripple = document.createElement('div');
-	ripple.classList.add($style.ripple);
+	const ripple = window.document.createElement('div');
+	ripple.classList.add(ripples.value!.dataset.childrenClass!);
 	ripple.style.top = (evt.clientY - rect.top - 1).toString() + 'px';
 	ripple.style.left = (evt.clientX - rect.left - 1).toString() + 'px';
 
-	ripples!.appendChild(ripple);
+	ripples.value!.appendChild(ripple);
 
 	const circleCenterX = evt.clientX - rect.left;
 	const circleCenterY = evt.clientY - rect.top;
@@ -99,7 +112,7 @@ function onMousedown(evt: MouseEvent): void {
 		ripple.style.opacity = '0';
 	}, 1000);
 	window.setTimeout(() => {
-		if (ripples) ripples.removeChild(ripple);
+		if (ripples.value) ripples.value.removeChild(ripple);
 	}, 2000);
 }
 </script>
@@ -117,18 +130,27 @@ function onMousedown(evt: MouseEvent): void {
 	font-size: 95%;
 	box-shadow: none;
 	text-decoration: none;
-	background: var(--buttonBg);
+	background: var(--MI_THEME-buttonBg);
 	border-radius: 5px;
 	overflow: clip;
 	box-sizing: border-box;
 	transition: background 0.1s ease;
 
+	&:hover {
+		text-decoration: none;
+	}
+
 	&:not(:disabled):hover {
-		background: var(--buttonHoverBg);
+		background: var(--MI_THEME-buttonHoverBg);
 	}
 
 	&:not(:disabled):active {
-		background: var(--buttonHoverBg);
+		background: var(--MI_THEME-buttonHoverBg);
+	}
+
+	&.iconOnly {
+		padding: 7px;
+		min-width: auto;
 	}
 
 	&.small {
@@ -151,15 +173,15 @@ function onMousedown(evt: MouseEvent): void {
 
 	&.primary {
 		font-weight: bold;
-		color: var(--fgOnAccent) !important;
-		background: var(--accent);
+		color: var(--MI_THEME-fgOnAccent) !important;
+		background: var(--MI_THEME-accent);
 
 		&:not(:disabled):hover {
-			background: var(--X8);
+			background: hsl(from var(--MI_THEME-accent) h s calc(l + 5));
 		}
 
 		&:not(:disabled):active {
-			background: var(--X8);
+			background: hsl(from var(--MI_THEME-accent) h s calc(l + 5));
 		}
 	}
 
@@ -194,43 +216,51 @@ function onMousedown(evt: MouseEvent): void {
 		}
 	}
 
+	&.transparent {
+		background: transparent;
+	}
+
 	&.gradate {
 		font-weight: bold;
-		color: var(--fgOnAccent) !important;
-		background: linear-gradient(90deg, var(--buttonGradateA), var(--buttonGradateB));
+		color: var(--MI_THEME-fgOnAccent) !important;
+		background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
 
 		&:not(:disabled):hover {
-			background: linear-gradient(90deg, var(--X8), var(--X8));
+			background: linear-gradient(90deg, hsl(from var(--MI_THEME-buttonGradateA) h s calc(l + 5)), hsl(from var(--MI_THEME-buttonGradateB) h s calc(l + 5)));
 		}
 
 		&:not(:disabled):active {
-			background: linear-gradient(90deg, var(--X8), var(--X8));
+			background: linear-gradient(90deg, hsl(from var(--MI_THEME-buttonGradateA) h s calc(l + 5)), hsl(from var(--MI_THEME-buttonGradateB) h s calc(l + 5)));
 		}
 	}
 
 	&.danger {
-		color: #ff2a2a;
+		font-weight: bold;
+		color: var(--MI_THEME-error);
 
 		&.primary {
 			color: #fff;
-			background: #ff2a2a;
+			background: var(--MI_THEME-error);
 
 			&:not(:disabled):hover {
-				background: #ff4242;
+				background: hsl(from var(--MI_THEME-error) h s calc(l + 10));
 			}
 
 			&:not(:disabled):active {
-				background: #d42e2e;
+				background: hsl(from var(--MI_THEME-error) h s calc(l - 10));
 			}
 		}
 	}
 
 	&:disabled {
-		opacity: 0.7;
+		opacity: 0.5;
+	}
+
+	&.wait {
+		cursor: wait !important;
 	}
 
 	&:focus-visible {
-		outline: solid 2px var(--focus);
 		outline-offset: 2px;
 	}
 

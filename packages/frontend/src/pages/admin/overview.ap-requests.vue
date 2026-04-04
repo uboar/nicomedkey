@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div>
 	<MkLoading v-if="fetching"/>
@@ -15,33 +20,29 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, useTemplateRef, ref } from 'vue';
 import { Chart } from 'chart.js';
 import gradient from 'chartjs-plugin-gradient';
-import tinycolor from 'tinycolor2';
-import MkMiniChart from '@/components/MkMiniChart.vue';
-import * as os from '@/os';
-import number from '@/filters/number';
-import MkNumberDiff from '@/components/MkNumberDiff.vue';
-import { i18n } from '@/i18n';
-import { useChartTooltip } from '@/scripts/use-chart-tooltip';
-import { chartVLine } from '@/scripts/chart-vline';
-import { defaultStore } from '@/store';
-import { alpha } from '@/scripts/color';
-import { initChart } from '@/scripts/init-chart';
+import isChromatic from 'chromatic';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { useChartTooltip } from '@/use/use-chart-tooltip.js';
+import { chartVLine } from '@/utility/chart-vline.js';
+import { store } from '@/store.js';
+import { alpha } from '@/utility/color.js';
+import { initChart } from '@/utility/init-chart.js';
 
 initChart();
 
 const chartLimit = 50;
-const chartEl = $shallowRef<HTMLCanvasElement>();
-const chartEl2 = $shallowRef<HTMLCanvasElement>();
-let fetching = $ref(true);
+const chartEl = useTemplateRef('chartEl');
+const chartEl2 = useTemplateRef('chartEl2');
+const fetching = ref(true);
 
 const { handler: externalTooltipHandler } = useChartTooltip();
 const { handler: externalTooltipHandler2 } = useChartTooltip();
 
 onMounted(async () => {
-	const now = new Date();
+	const now = isChromatic() ? new Date('2024-08-31T10:00:00Z') : new Date();
 
 	const getDate = (ago: number) => {
 		const y = now.getFullYear();
@@ -51,34 +52,33 @@ onMounted(async () => {
 		return new Date(y, m, d - ago);
 	};
 
-	const format = (arr) => {
+	const format = (arr: number[]) => {
 		return arr.map((v, i) => ({
 			x: getDate(i).getTime(),
 			y: v,
 		}));
 	};
 
-	const formatMinus = (arr) => {
+	const formatMinus = (arr: number[]) => {
 		return arr.map((v, i) => ({
 			x: getDate(i).getTime(),
 			y: -v,
 		}));
 	};
 
-	const raw = await os.api('charts/ap-request', { limit: chartLimit, span: 'day' });
+	const raw = await misskeyApi('charts/ap-request', { limit: chartLimit, span: 'day' });
 
-	const vLineColor = defaultStore.state.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+	const vLineColor = store.s.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 	const succColor = '#87e000';
 	const failColor = '#ff4400';
 
 	const succMax = Math.max(...raw.deliverSucceeded);
 	const failMax = Math.max(...raw.deliverFailed);
 
-	new Chart(chartEl, {
+	new Chart(chartEl.value, {
 		type: 'line',
 		data: {
 			datasets: [{
-				stack: 'a',
 				parsing: false,
 				label: 'Out: Succ',
 				data: format(raw.deliverSucceeded).slice().reverse(),
@@ -92,7 +92,6 @@ onMounted(async () => {
 				fill: true,
 				clip: 8,
 			}, {
-				stack: 'a',
 				parsing: false,
 				label: 'Out: Fail',
 				data: formatMinus(raw.deliverFailed).slice().reverse(),
@@ -137,7 +136,6 @@ onMounted(async () => {
 					min: getDate(chartLimit).getTime(),
 				},
 				y: {
-					stacked: true,
 					position: 'left',
 					suggestedMax: 10,
 					grid: {
@@ -171,6 +169,9 @@ onMounted(async () => {
 						duration: 0,
 					},
 					external: externalTooltipHandler,
+					callbacks: {
+						label: context => `${context.dataset.label}: ${Math.abs(context.parsed.y)}`,
+					},
 				},
 				gradient,
 			},
@@ -178,7 +179,7 @@ onMounted(async () => {
 		plugins: [chartVLine(vLineColor)],
 	});
 
-	new Chart(chartEl2, {
+	new Chart(chartEl2.value, {
 		type: 'bar',
 		data: {
 			datasets: [{
@@ -264,8 +265,8 @@ onMounted(async () => {
 		},
 		plugins: [chartVLine(vLineColor)],
 	});
-	
-	fetching = false;
+
+	fetching.value = false;
 });
 </script>
 
@@ -277,7 +278,7 @@ onMounted(async () => {
 				padding: 16px;
 
 				&:first-child {
-					border-bottom: solid 0.5px var(--divider);
+					border-bottom: solid 0.5px var(--MI_THEME-divider);
 				}
 			}
 		}

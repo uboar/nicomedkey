@@ -1,16 +1,21 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { IdService } from '@/core/IdService.js';
-import type { ClipsRepository } from '@/models/index.js';
+import type { MiClip } from '@/models/_.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
-import { DI } from '@/di-symbols.js';
-import { RoleService } from '@/core/RoleService.js';
 import { ApiError } from '@/server/api/error.js';
+import { ClipService } from '@/core/ClipService.js';
 
 export const meta = {
 	tags: ['clips'],
 
 	requireCredential: true,
+
+	prohibitMoved: true,
 
 	kind: 'write:account',
 
@@ -34,40 +39,30 @@ export const paramDef = {
 	properties: {
 		name: { type: 'string', minLength: 1, maxLength: 100 },
 		isPublic: { type: 'boolean', default: false },
-		description: { type: 'string', nullable: true, minLength: 1, maxLength: 2048 },
+		description: { type: 'string', nullable: true, maxLength: 2048 },
 	},
 	required: ['name'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
-
 		private clipEntityService: ClipEntityService,
-		private roleService: RoleService,
-		private idService: IdService,
+		private clipService: ClipService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const currentCount = await this.clipsRepository.countBy({
-				userId: me.id,
-			});
-			if (currentCount > (await this.roleService.getUserPolicies(me.id)).clipLimit) {
-				throw new ApiError(meta.errors.tooManyClips);
+			let clip: MiClip;
+			try {
+				// 空文字列をnullにしたいので??は使わない
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				clip = await this.clipService.create(me, ps.name, ps.isPublic, ps.description || null);
+			} catch (e) {
+				if (e instanceof ClipService.TooManyClipsError) {
+					throw new ApiError(meta.errors.tooManyClips);
+				}
+				throw e;
 			}
-	
-			const clip = await this.clipsRepository.insert({
-				id: this.idService.genId(),
-				createdAt: new Date(),
-				userId: me.id,
-				name: ps.name,
-				isPublic: ps.isPublic,
-				description: ps.description,
-			}).then(x => this.clipsRepository.findOneByOrFail(x.identifiers[0]));
-
-			return await this.clipEntityService.pack(clip);
+			return await this.clipEntityService.pack(clip, me);
 		});
 	}
 }

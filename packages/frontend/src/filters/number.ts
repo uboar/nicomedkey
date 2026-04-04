@@ -1,3 +1,8 @@
-import { numberFormat } from '@/scripts/intl-const';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
 
-export default n => n == null ? 'N/A' : numberFormat.format(n);
+import { numberFormat } from '@@/js/intl-const.js';
+
+export default (n?: number) => n == null ? 'N/A' : numberFormat.format(n);

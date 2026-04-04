@@ -1,46 +1,34 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div class="geegznzt">
-	<XAntenna :antenna="draft" @created="onAntennaCreated"/>
-</div>
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
+	<MkAntennaEditor @created="onAntennaCreated"/>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { inject } from 'vue';
-import XAntenna from './editor.vue';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
-import { useRouter } from '@/router';
+import { computed } from 'vue';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
+import { antennasCache } from '@/cache.js';
+import { useRouter } from '@/router.js';
+import MkAntennaEditor from '@/components/MkAntennaEditor.vue';
 
 const router = useRouter();
 
-let draft = $ref({
-	name: '',
-	src: 'all',
-	userListId: null,
-	userGroupId: null,
-	users: [],
-	keywords: [],
-	excludeKeywords: [],
-	withReplies: false,
-	caseSensitive: false,
-	withFile: false,
-	notify: false,
-});
-
 function onAntennaCreated() {
+	antennasCache.delete();
 	router.push('/my/antennas');
 }
 
-const headerActions = $computed(() => []);
+const headerActions = computed(() => []);
+const headerTabs = computed(() => []);
 
-const headerTabs = $computed(() => []);
-
-definePageMetadata({
-	title: i18n.ts.manageAntennas,
+definePage(() => ({
+	title: i18n.ts.createAntenna,
 	icon: 'ti ti-antenna',
-});
+}));
 </script>
-
-<style lang="scss" scoped>
-
-</style>

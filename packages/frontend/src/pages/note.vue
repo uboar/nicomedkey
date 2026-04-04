@@ -1,120 +1,158 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="800">
-		<div class="fcuexfpr">
-			<Transition :name="$store.state.animation ? 'fade' : ''" mode="out-in">
-				<div v-if="note" class="note">
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="800">
+		<div>
+			<Transition :name="prefer.s.animation ? 'fade' : ''" mode="out-in">
+				<div v-if="note">
 					<div v-if="showNext" class="_margin">
-						<XNotes class="" :pagination="nextPagination" :no-gap="true"/>
+						<MkNotes class="" :pagination="showNext === 'channel' ? nextChannelPagination : nextUserPagination" :noGap="true" :disableAutoLoad="true"/>
 					</div>
 
-					<div class="main _margin">
-						<MkButton v-if="!showNext && hasNext" class="load next" @click="showNext = true"><i class="ti ti-chevron-up"></i></MkButton>
-						<div class="note _margin _gaps_s">
+					<div class="_margin">
+						<div v-if="!showNext" class="_buttons" :class="$style.loadNext">
+							<MkButton v-if="note.channelId" rounded :class="$style.loadButton" @click="showNext = 'channel'"><i class="ti ti-chevron-up"></i> <i class="ti ti-device-tv"></i></MkButton>
+							<MkButton rounded :class="$style.loadButton" @click="showNext = 'user'"><i class="ti ti-chevron-up"></i> <i class="ti ti-user"></i></MkButton>
+						</div>
+						<div class="_margin _gaps_s">
 							<MkRemoteCaution v-if="note.user.host != null" :href="note.url ?? note.uri"/>
-							<XNoteDetailed :key="note.id" v-model:note="note" class="note"/>
+							<MkNoteDetailed :key="note.id" v-model:note="note" :initialTab="initialTab" :class="$style.note"/>
 						</div>
-						<div v-if="clips && clips.length > 0" class="clips _margin">
-							<div class="title">{{ i18n.ts.clip }}</div>
-							<MkA v-for="item in clips" :key="item.id" :to="`/clips/${item.id}`" class="item _panel _margin">
-								<b>{{ item.name }}</b>
-								<div v-if="item.description" class="description">{{ item.description }}</div>
-								<div class="user">
-									<MkAvatar :user="item.user" class="avatar" indicator link preview/> <MkUserName :user="item.user" :nowrap="false"/>
-								</div>
-							</MkA>
+						<div v-if="clips && clips.length > 0" class="_margin">
+							<div style="font-weight: bold; padding: 12px;">{{ i18n.ts.clip }}</div>
+							<div class="_gaps">
+								<MkClipPreview v-for="item in clips" :key="item.id" :clip="item"/>
+							</div>
 						</div>
-						<MkButton v-if="!showPrev && hasPrev" class="load prev" @click="showPrev = true"><i class="ti ti-chevron-down"></i></MkButton>
+						<div v-if="!showPrev" class="_buttons" :class="$style.loadPrev">
+							<MkButton v-if="note.channelId" rounded :class="$style.loadButton" @click="showPrev = 'channel'"><i class="ti ti-chevron-down"></i> <i class="ti ti-device-tv"></i></MkButton>
+							<MkButton rounded :class="$style.loadButton" @click="showPrev = 'user'"><i class="ti ti-chevron-down"></i> <i class="ti ti-user"></i></MkButton>
+						</div>
 					</div>
 
 					<div v-if="showPrev" class="_margin">
-						<XNotes class="" :pagination="prevPagination" :no-gap="true"/>
+						<MkNotes class="" :pagination="showPrev === 'channel' ? prevChannelPagination : prevUserPagination" :noGap="true"/>
 					</div>
 				</div>
-				<MkError v-else-if="error" @retry="fetch()"/>
+				<MkError v-else-if="error" @retry="fetchNote()"/>
 				<MkLoading v-else/>
 			</Transition>
 		</div>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed, defineComponent, watch } from 'vue';
-import * as misskey from 'misskey-js';
-import XNote from '@/components/MkNote.vue';
-import XNoteDetailed from '@/components/MkNoteDetailed.vue';
-import XNotes from '@/components/MkNotes.vue';
+import { computed, watch, ref } from 'vue';
+import * as Misskey from 'misskey-js';
+import { host } from '@@/js/config.js';
+import type { Paging } from '@/components/MkPagination.vue';
+import MkNoteDetailed from '@/components/MkNoteDetailed.vue';
+import MkNotes from '@/components/MkNotes.vue';
 import MkRemoteCaution from '@/components/MkRemoteCaution.vue';
 import MkButton from '@/components/MkButton.vue';
-import * as os from '@/os';
-import { definePageMetadata } from '@/scripts/page-metadata';
-import { i18n } from '@/i18n';
-import { dateString } from '@/filters/date';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { definePage } from '@/page.js';
+import { i18n } from '@/i18n.js';
+import { dateString } from '@/filters/date.js';
+import MkClipPreview from '@/components/MkClipPreview.vue';
+import { prefer } from '@/preferences.js';
+import { pleaseLogin } from '@/utility/please-login.js';
+import { getAppearNote } from '@/utility/get-appear-note.js';
+import { serverContext, assertServerContext } from '@/server-context.js';
+import { $i } from '@/i.js';
+
+// contextは非ログイン状態の情報しかないためログイン時は利用できない
+const CTX_NOTE = !$i && assertServerContext(serverContext, 'note') ? serverContext.note : null;
 
 const props = defineProps<{
 	noteId: string;
+	initialTab?: string;
 }>();
 
-let note = $ref<null | misskey.entities.Note>();
-let clips = $ref();
-let hasPrev = $ref(false);
-let hasNext = $ref(false);
-let showPrev = $ref(false);
-let showNext = $ref(false);
-let error = $ref();
+const note = ref<null | Misskey.entities.Note>(CTX_NOTE);
+const clips = ref<Misskey.entities.Clip[]>();
+const showPrev = ref<'user' | 'channel' | false>(false);
+const showNext = ref<'user' | 'channel' | false>(false);
+const error = ref();
 
-const prevPagination = {
-	endpoint: 'users/notes' as const,
+const prevUserPagination: Paging = {
+	endpoint: 'users/notes',
 	limit: 10,
-	params: computed(() => note ? ({
-		userId: note.userId,
-		untilId: note.id,
-	}) : null),
+	params: computed(() => note.value ? ({
+		userId: note.value.userId,
+		untilId: note.value.id,
+	}) : undefined),
 };
 
-const nextPagination = {
+const nextUserPagination: Paging = {
 	reversed: true,
-	endpoint: 'users/notes' as const,
+	endpoint: 'users/notes',
 	limit: 10,
-	params: computed(() => note ? ({
-		userId: note.userId,
-		sinceId: note.id,
-	}) : null),
+	params: computed(() => note.value ? ({
+		userId: note.value.userId,
+		sinceId: note.value.id,
+	}) : undefined),
+};
+
+const prevChannelPagination: Paging = {
+	endpoint: 'channels/timeline',
+	limit: 10,
+	params: computed(() => note.value ? ({
+		channelId: note.value.channelId,
+		untilId: note.value.id,
+	}) : undefined),
+};
+
+const nextChannelPagination: Paging = {
+	reversed: true,
+	endpoint: 'channels/timeline',
+	limit: 10,
+	params: computed(() => note.value ? ({
+		channelId: note.value.channelId,
+		sinceId: note.value.id,
+	}) : undefined),
 };
 
 function fetchNote() {
-	hasPrev = false;
-	hasNext = false;
-	showPrev = false;
-	showNext = false;
-	note = null;
-	os.api('notes/show', {
+	showPrev.value = false;
+	showNext.value = false;
+	note.value = null;
+
+	if (CTX_NOTE && CTX_NOTE.id === props.noteId) {
+		note.value = CTX_NOTE;
+		return;
+	}
+
+	misskeyApi('notes/show', {
 		noteId: props.noteId,
 	}).then(res => {
-		note = res;
-		Promise.all([
-			os.api('notes/clips', {
-				noteId: note.id,
-			}),
-			os.api('users/notes', {
-				userId: note.userId,
-				untilId: note.id,
-				limit: 1,
-			}),
-			os.api('users/notes', {
-				userId: note.userId,
-				sinceId: note.id,
-				limit: 1,
-			}),
-		]).then(([_clips, prev, next]) => {
-			clips = _clips;
-			hasPrev = prev.length !== 0;
-			hasNext = next.length !== 0;
-		});
+		note.value = res;
+		const appearNote = getAppearNote(res);
+		// 古いノートは被クリップ数をカウントしていないので、2023-10-01以前のものは強制的にnotes/clipsを叩く
+		if ((appearNote.clippedCount ?? 0) > 0 || new Date(appearNote.createdAt).getTime() < new Date('2023-10-01').getTime()) {
+			misskeyApi('notes/clips', {
+				noteId: appearNote.id,
+			}).then((_clips) => {
+				clips.value = _clips;
+			});
+		}
 	}).catch(err => {
-		error = err;
+		if (err.id === '8e75455b-738c-471d-9f80-62693f33372e') {
+			pleaseLogin({
+				path: '/',
+				message: i18n.ts.thisContentsAreMarkedAsSigninRequiredByAuthor,
+				openOnRemote: {
+					type: 'lookup',
+					url: `https://${host}/notes/${props.noteId}`,
+				},
+			});
+		}
+		error.value = err;
 	});
 }
 
@@ -122,23 +160,25 @@ watch(() => props.noteId, fetchNote, {
 	immediate: true,
 });
 
-const headerActions = $computed(() => []);
+const headerActions = computed(() => []);
 
-const headerTabs = $computed(() => []);
+const headerTabs = computed(() => []);
 
-definePageMetadata(computed(() => note ? {
+definePage(() => ({
 	title: i18n.ts.note,
-	subtitle: dateString(note.createdAt),
-	avatar: note.user,
-	path: `/notes/${note.id}`,
-	share: {
-		title: i18n.t('noteOf', { user: note.user.name }),
-		text: note.text,
-	},
-} : null));
+	...note.value ? {
+		subtitle: dateString(note.value.createdAt),
+		avatar: note.value.user,
+		path: `/notes/${note.value.id}`,
+		share: {
+			title: i18n.tsx.noteOf({ user: note.value.user.name ?? note.value.user.username }),
+			text: note.value.text,
+		},
+	} : {},
+}));
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss" module>
 .fade-enter-active,
 .fade-leave-active {
 	transition: opacity 0.125s ease;
@@ -148,60 +188,25 @@ definePageMetadata(computed(() => note ? {
 	opacity: 0;
 }
 
-.fcuexfpr {
-	background: var(--bg);
+.loadNext,
+.loadPrev {
+	justify-content: center;
+}
 
-	> .note {
-		> .main {
-			> .load {
-				min-width: 0;
-				margin: 0 auto;
-				border-radius: 999px;
+.loadNext {
+	margin-bottom: var(--MI-margin);
+}
 
-				&.next {
-					margin-bottom: var(--margin);
-				}
+.loadPrev {
+	margin-top: var(--MI-margin);
+}
 
-				&.prev {
-					margin-top: var(--margin);
-				}
-			}
+.loadButton {
+	min-width: 0;
+}
 
-			> .note {
-				> .note {
-					border-radius: var(--radius);
-					background: var(--panel);
-				}
-			}
-
-			> .clips {
-				> .title {
-					font-weight: bold;
-					padding: 12px;
-				}
-
-				> .item {
-					display: block;
-					padding: 16px;
-
-					> .description {
-						padding: 8px 0;
-					}
-
-					> .user {
-						$height: 32px;
-						padding-top: 16px;
-						border-top: solid 0.5px var(--divider);
-						line-height: $height;
-
-						> .avatar {
-							width: $height;
-							height: $height;
-						}
-					}
-				}
-			}
-		}
-	}
+.note {
+	border-radius: var(--MI-radius);
+	background: var(--MI_THEME-panel);
 }
 </style>

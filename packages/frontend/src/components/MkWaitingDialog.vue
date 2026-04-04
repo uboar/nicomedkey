@@ -1,5 +1,10 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkModal ref="modal" :prefer-type="'dialog'" :z-priority="'high'" @click="success ? done() : () => {}" @closed="emit('closed')">
+<MkModal ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="success ? done() : () => {}" @closed="emit('closed')">
 	<div :class="[$style.root, { [$style.iconOnly]: (text == null) || success }]">
 		<i v-if="success" :class="[$style.icon, $style.success]" class="ti ti-check"></i>
 		<MkLoading v-else :class="[$style.icon, $style.waiting]" :em="true"/>
@@ -9,15 +14,15 @@
 </template>
 
 <script lang="ts" setup>
-import { watch, shallowRef } from 'vue';
+import { watch, useTemplateRef } from 'vue';
 import MkModal from '@/components/MkModal.vue';
 
-const modal = shallowRef<InstanceType<typeof MkModal>>();
+const modal = useTemplateRef('modal');
 
 const props = defineProps<{
 	success: boolean;
 	showing: boolean;
-	text?: string;
+	text?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -27,7 +32,7 @@ const emit = defineEmits<{
 
 function done() {
 	emit('done');
-	modal.value.close();
+	modal.value?.close();
 }
 
 watch(() => props.showing, () => {
@@ -42,8 +47,8 @@ watch(() => props.showing, () => {
 	padding: 32px;
 	box-sizing: border-box;
 	text-align: center;
-	background: var(--panel);
-	border-radius: var(--radius);
+	background: var(--MI_THEME-panel);
+	border-radius: var(--MI-radius);
 	width: 250px;
 
 	&.iconOnly {
@@ -60,7 +65,7 @@ watch(() => props.showing, () => {
 	font-size: 32px;
 
 	&.success {
-		color: var(--accent);
+		color: var(--MI_THEME-accent);
 	}
 
 	&.waiting {

@@ -1,54 +1,88 @@
-import { App } from 'vue';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
 
-import Mfm from './global/MkMisskeyFlavoredMarkdown.vue';
+import Mfm from './global/MkMfm.js';
 import MkA from './global/MkA.vue';
 import MkAcct from './global/MkAcct.vue';
 import MkAvatar from './global/MkAvatar.vue';
 import MkEmoji from './global/MkEmoji.vue';
+import MkCondensedLine from './global/MkCondensedLine.vue';
 import MkCustomEmoji from './global/MkCustomEmoji.vue';
 import MkUserName from './global/MkUserName.vue';
 import MkEllipsis from './global/MkEllipsis.vue';
 import MkTime from './global/MkTime.vue';
 import MkUrl from './global/MkUrl.vue';
-import I18n from './global/i18n';
+import I18n from './global/I18n.vue';
 import RouterView from './global/RouterView.vue';
+import NestedRouterView from './global/NestedRouterView.vue';
+import StackingRouterView from './global/StackingRouterView.vue';
 import MkLoading from './global/MkLoading.vue';
 import MkError from './global/MkError.vue';
 import MkAd from './global/MkAd.vue';
 import MkPageHeader from './global/MkPageHeader.vue';
 import MkSpacer from './global/MkSpacer.vue';
 import MkStickyContainer from './global/MkStickyContainer.vue';
+import MkLazy from './global/MkLazy.vue';
+import PageWithHeader from './global/PageWithHeader.vue';
+import PageWithAnimBg from './global/PageWithAnimBg.vue';
+import SearchMarker from './global/SearchMarker.vue';
+import SearchLabel from './global/SearchLabel.vue';
+import SearchKeyword from './global/SearchKeyword.vue';
+import SearchIcon from './global/SearchIcon.vue';
+
+import type { App } from 'vue';
 
 export default function(app: App) {
-	app.component('I18n', I18n);
-	app.component('RouterView', RouterView);
-	app.component('Mfm', Mfm);
-	app.component('MkA', MkA);
-	app.component('MkAcct', MkAcct);
-	app.component('MkAvatar', MkAvatar);
-	app.component('MkEmoji', MkEmoji);
-	app.component('MkCustomEmoji', MkCustomEmoji);
-	app.component('MkUserName', MkUserName);
-	app.component('MkEllipsis', MkEllipsis);
-	app.component('MkTime', MkTime);
-	app.component('MkUrl', MkUrl);
-	app.component('MkLoading', MkLoading);
-	app.component('MkError', MkError);
-	app.component('MkAd', MkAd);
-	app.component('MkPageHeader', MkPageHeader);
-	app.component('MkSpacer', MkSpacer);
-	app.component('MkStickyContainer', MkStickyContainer);
+	for (const [key, value] of Object.entries(components)) {
+		app.component(key, value);
+	}
 }
+
+export const components = {
+	I18n: I18n,
+	RouterView: RouterView,
+	NestedRouterView: NestedRouterView,
+	StackingRouterView: StackingRouterView,
+	Mfm: Mfm,
+	MkA: MkA,
+	MkAcct: MkAcct,
+	MkAvatar: MkAvatar,
+	MkEmoji: MkEmoji,
+	MkCondensedLine: MkCondensedLine,
+	MkCustomEmoji: MkCustomEmoji,
+	MkUserName: MkUserName,
+	MkEllipsis: MkEllipsis,
+	MkTime: MkTime,
+	MkUrl: MkUrl,
+	MkLoading: MkLoading,
+	MkError: MkError,
+	MkAd: MkAd,
+	MkPageHeader: MkPageHeader,
+	MkSpacer: MkSpacer,
+	MkStickyContainer: MkStickyContainer,
+	MkLazy: MkLazy,
+	PageWithHeader: PageWithHeader,
+	PageWithAnimBg: PageWithAnimBg,
+	SearchMarker: SearchMarker,
+	SearchLabel: SearchLabel,
+	SearchKeyword: SearchKeyword,
+	SearchIcon: SearchIcon,
+};
 
 declare module '@vue/runtime-core' {
 	export interface GlobalComponents {
 		I18n: typeof I18n;
 		RouterView: typeof RouterView;
+		NestedRouterView: typeof NestedRouterView;
+		StackingRouterView: typeof StackingRouterView;
 		Mfm: typeof Mfm;
 		MkA: typeof MkA;
 		MkAcct: typeof MkAcct;
 		MkAvatar: typeof MkAvatar;
 		MkEmoji: typeof MkEmoji;
+		MkCondensedLine: typeof MkCondensedLine;
 		MkCustomEmoji: typeof MkCustomEmoji;
 		MkUserName: typeof MkUserName;
 		MkEllipsis: typeof MkEllipsis;
@@ -60,5 +94,12 @@ declare module '@vue/runtime-core' {
 		MkPageHeader: typeof MkPageHeader;
 		MkSpacer: typeof MkSpacer;
 		MkStickyContainer: typeof MkStickyContainer;
+		MkLazy: typeof MkLazy;
+		PageWithHeader: typeof PageWithHeader;
+		PageWithAnimBg: typeof PageWithAnimBg;
+		SearchMarker: typeof SearchMarker;
+		SearchLabel: typeof SearchLabel;
+		SearchKeyword: typeof SearchKeyword;
+		SearchIcon: typeof SearchIcon;
 	}
 }

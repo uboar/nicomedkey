@@ -1,14 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import type { ClipsRepository } from '@/models/index.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
-import { DI } from '@/di-symbols.js';
+import { ClipService } from '@/core/ClipService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['clips'],
 
 	requireCredential: true,
+
+	prohibitMoved: true,
 
 	kind: 'write:account',
 
@@ -33,38 +39,31 @@ export const paramDef = {
 		clipId: { type: 'string', format: 'misskey:id' },
 		name: { type: 'string', minLength: 1, maxLength: 100 },
 		isPublic: { type: 'boolean' },
-		description: { type: 'string', nullable: true, minLength: 1, maxLength: 2048 },
+		description: { type: 'string', nullable: true, maxLength: 2048 },
 	},
-	required: ['clipId', 'name'],
+	required: ['clipId'],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.clipsRepository)
-		private clipsRepository: ClipsRepository,
+		private clipService: ClipService,
 
 		private clipEntityService: ClipEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			// Fetch the clip
-			const clip = await this.clipsRepository.findOneBy({
-				id: ps.clipId,
-				userId: me.id,
-			});
-
-			if (clip == null) {
-				throw new ApiError(meta.errors.noSuchClip);
+			try {
+				// 空文字列をnullにしたいので??は使わない
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				await this.clipService.update(me, ps.clipId, ps.name, ps.isPublic, ps.description || null);
+			} catch (e) {
+				if (e instanceof ClipService.NoSuchClipError) {
+					throw new ApiError(meta.errors.noSuchClip);
+				}
+				throw e;
 			}
 
-			await this.clipsRepository.update(clip.id, {
-				name: ps.name,
-				description: ps.description,
-				isPublic: ps.isPublic,
-			});
-
-			return await this.clipEntityService.pack(clip.id);
+			return await this.clipEntityService.pack(ps.clipId, me);
 		});
 	}
 }

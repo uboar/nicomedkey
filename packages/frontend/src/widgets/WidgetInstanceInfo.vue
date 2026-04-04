@@ -1,12 +1,17 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div class="_panel">
-	<div :class="$style.container" :style="{ backgroundImage: $instance.bannerUrl ? `url(${ $instance.bannerUrl })` : null }">
+	<div :class="$style.container" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : null }">
 		<div :class="$style.iconContainer">
-			<img :src="$instance.iconUrl ?? $instance.faviconUrl ?? '/favicon.ico'" alt="" :class="$style.icon"/>
+			<img :src="instance.iconUrl ?? instance.faviconUrl ?? '/favicon.ico'" alt="" :class="$style.icon"/>
 		</div>
 		<div :class="$style.bodyContainer">
 			<div :class="$style.body">
-				<MkA :class="$style.name" to="/about" behavior="window">{{ $instance.name }}</MkA>
+				<MkA :class="$style.name" to="/about" behavior="window">{{ instance.name }}</MkA>
 				<div :class="$style.host">{{ host }}</div>
 			</div>
 		</div>
@@ -15,10 +20,11 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, Ref, ref, watch } from 'vue';
-import { useWidgetPropsManager, Widget, WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget';
-import { GetFormResultType } from '@/scripts/form';
-import { host } from '@/config';
+import { useWidgetPropsManager } from './widget.js';
+import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
+import type { GetFormResultType } from '@/utility/form.js';
+import { host } from '@@/js/config.js';
+import { instance } from '@/instance.js';
 
 const name = 'instanceInfo';
 
@@ -27,11 +33,8 @@ const widgetPropsDef = {
 
 type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 
-// 現時点ではvueの制限によりimportしたtypeをジェネリックに渡せない
-//const props = defineProps<WidgetComponentProps<WidgetProps>>();
-//const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
-const props = defineProps<{ widget?: Widget<WidgetProps>; }>();
-const emit = defineEmits<{ (ev: 'updateProps', props: WidgetProps); }>();
+const props = defineProps<WidgetComponentProps<WidgetProps>>();
+const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
 const { widgetProps, configure } = useWidgetPropsManager(name,
 	widgetPropsDef,
@@ -64,9 +67,10 @@ defineExpose<WidgetComponentExpose>({
 	display: inline-block;
 	width: 60px;
 	height: 60px;
-	border-radius: 8px;
+	border-radius: 50%;
 	box-sizing: border-box;
 	border: solid 3px #fff;
+	background: #fff;
 }
 
 .bodyContainer {
@@ -79,16 +83,19 @@ defineExpose<WidgetComponentExpose>({
 .body {
 	text-overflow: ellipsis;
 	overflow: clip;
+	margin-left: -10px;
+	padding: 10px;
 }
 
 .name {
 	color: #fff;
-	filter: drop-shadow(0 0 4px #000);
+	filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 0.1px rgba(0, 0, 0, 0.5));
 	font-weight: bold;
 }
 
 .host {
 	color: #fff;
-	filter: drop-shadow(0 0 4px #000);
+	filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 0.1px rgba(0, 0, 0, 0.5));
+
 }
 </style>

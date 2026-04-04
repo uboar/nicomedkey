@@ -1,25 +1,37 @@
-<template>
-<XColumn :column="column" :is-stacked="isStacked" @parent-focus="$event => emit('parent-focus', $event)">
-	<template #header><i class="ti ti-at" style="margin-right: 8px;"></i>{{ column.name }}</template>
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
 
-	<XNotes :pagination="pagination"/>
+<template>
+<XColumn :column="column" :isStacked="isStacked" :refresher="() => reloadTimeline()">
+	<template #header><i class="ti ti-at" style="margin-right: 8px;"></i>{{ column.name || i18n.ts._deck._columns.mentions }}</template>
+
+	<MkNotes ref="tlComponent" :pagination="pagination"/>
 </XColumn>
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
+import { ref } from 'vue';
 import XColumn from './column.vue';
-import XNotes from '@/components/MkNotes.vue';
-import { Column } from './deck-store';
+import type { Column } from '@/deck.js';
+import MkNotes from '@/components/MkNotes.vue';
+import { i18n } from '../../i18n.js';
 
 defineProps<{
 	column: Column;
 	isStacked: boolean;
 }>();
 
-const emit = defineEmits<{
-	(ev: 'parent-focus', direction: 'up' | 'down' | 'left' | 'right'): void;
-}>();
+const tlComponent = ref<InstanceType<typeof MkNotes>>();
+
+function reloadTimeline() {
+	return new Promise<void>((res) => {
+		tlComponent.value?.pagingComponent?.reload().then(() => {
+			res();
+		});
+	});
+}
 
 const pagination = {
 	endpoint: 'notes/mentions' as const,

@@ -1,7 +1,24 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkA :to="`/gallery/${post.id}`" class="ttasepnz _panel" tabindex="-1">
+<MkA :to="`/gallery/${post.id}`" class="ttasepnz _panel" tabindex="-1" @pointerenter="enterHover" @pointerleave="leaveHover">
 	<div class="thumbnail">
-		<ImgWithBlurhash class="img" :src="post.files[0].thumbnailUrl" :hash="post.files[0].blurhash"/>
+		<Transition>
+			<ImgWithBlurhash
+				class="img layered"
+				:transition="safe ? null : {
+					duration: 500,
+					leaveActiveClass: $style.transition_toggle_leaveActive,
+					leaveToClass: $style.transition_toggle_leaveTo,
+				}"
+				:src="post.files?.[0]?.thumbnailUrl"
+				:hash="post.files?.[0]?.blurhash"
+				:forceBlurhash="!show"
+			/>
+		</Transition>
 	</div>
 	<article>
 		<header>
@@ -15,15 +32,40 @@
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
-import { userName } from '@/filters/user';
+import * as Misskey from 'misskey-js';
+import { computed, ref } from 'vue';
 import ImgWithBlurhash from '@/components/MkImgWithBlurhash.vue';
-import * as os from '@/os';
+import { prefer } from '@/preferences.js';
 
 const props = defineProps<{
-	post: any;
+	post: Misskey.entities.GalleryPost;
 }>();
+
+const hover = ref(false);
+const safe = computed(() => prefer.s.nsfw === 'ignore' || prefer.s.nsfw === 'respect' && !props.post.isSensitive);
+const show = computed(() => safe.value || hover.value);
+
+function enterHover(): void {
+	hover.value = true;
+}
+
+function leaveHover(): void {
+	hover.value = false;
+}
 </script>
+
+<style lang="scss" module>
+.transition_toggle_leaveActive {
+	transition: opacity .5s;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.transition_toggle_leaveTo {
+	opacity: 0;
+}
+</style>
 
 <style lang="scss" scoped>
 .ttasepnz {
@@ -33,7 +75,7 @@ const props = defineProps<{
 
 	&:hover {
 		text-decoration: none;
-		color: var(--accent);
+		color: var(--MI_THEME-accent);
 
 		> .thumbnail {
 			transform: scale(1.1);
@@ -41,7 +83,7 @@ const props = defineProps<{
 
 		> article {
 			> footer {
-				&:before {
+				&::before {
 					opacity: 1;
 				}
 			}
@@ -52,12 +94,17 @@ const props = defineProps<{
 		width: 100%;
 		height: 100%;
 		position: absolute;
-		transition: all 0.5s ease;
+		transition: transform 0.5s ease;
 
 		> .img {
 			width: 100%;
 			height: 100%;
 			object-fit: cover;
+
+			&.layered {
+				position: absolute;
+				top: 0;
+			}
 		}
 	}
 
@@ -92,7 +139,7 @@ const props = defineProps<{
 			text-shadow: 0 0 8px #000;
 			background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
 
-			&:before {
+			&::before {
 				content: "";
 				display: block;
 				position: absolute;

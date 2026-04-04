@@ -1,98 +1,137 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div class="_gaps_m">
-	<FormSection v-if="!fetching" first>
-		<template #label>{{ i18n.ts.usageAmount }}</template>
+<SearchMarker path="/settings/drive" :label="i18n.ts.drive" :keywords="['drive']" icon="ti ti-cloud">
+	<div class="_gaps_m">
+		<MkFeatureBanner icon="/client-assets/cloud_3d.png" color="#0059ff">
+			<SearchKeyword>{{ i18n.ts._settings.driveBanner }}</SearchKeyword>
+		</MkFeatureBanner>
 
-		<div class="_gaps_m">
-			<div class="uawsfosz">
-				<div class="meter"><div :style="meterStyle"></div></div>
+		<SearchMarker :keywords="['capacity', 'usage']">
+			<FormSection first>
+				<template #label><SearchLabel>{{ i18n.ts.usageAmount }}</SearchLabel></template>
+
+				<div v-if="!fetching" class="_gaps_m">
+					<div>
+						<div :class="$style.meter"><div :class="$style.meterValue" :style="meterStyle"></div></div>
+					</div>
+					<FormSplit>
+						<MkKeyValue>
+							<template #key>{{ i18n.ts.capacity }}</template>
+							<template #value>{{ bytes(capacity, 1) }}</template>
+						</MkKeyValue>
+						<MkKeyValue>
+							<template #key>{{ i18n.ts.inUse }}</template>
+							<template #value>{{ bytes(usage, 1) }}</template>
+						</MkKeyValue>
+					</FormSplit>
+				</div>
+			</FormSection>
+		</SearchMarker>
+
+		<SearchMarker :keywords="['statistics', 'usage']">
+			<FormSection>
+				<template #label><SearchLabel>{{ i18n.ts.statistics }}</SearchLabel></template>
+				<MkChart src="per-user-drive" :args="{ user: $i }" span="day" :limit="7 * 5" :bar="true" :stacked="true" :detailed="false" :aspectRatio="6"/>
+			</FormSection>
+		</SearchMarker>
+
+		<FormSection>
+			<div class="_gaps_m">
+				<SearchMarker :keywords="['default', 'upload', 'folder']">
+					<FormLink @click="chooseUploadFolder()">
+						<SearchLabel>{{ i18n.ts.uploadFolder }}</SearchLabel>
+						<template #suffix>{{ uploadFolder ? uploadFolder.name : '-' }}</template>
+						<template #suffixIcon><i class="ti ti-folder"></i></template>
+					</FormLink>
+				</SearchMarker>
+
+				<FormLink to="/settings/drive/cleaner">
+					{{ i18n.ts.drivecleaner }}
+				</FormLink>
+
+				<SearchMarker :keywords="['keep', 'original', 'filename']">
+					<MkPreferenceContainer k="keepOriginalFilename">
+						<MkSwitch v-model="keepOriginalFilename">
+							<template #label><SearchLabel>{{ i18n.ts.keepOriginalFilename }}</SearchLabel></template>
+							<template #caption><SearchKeyword>{{ i18n.ts.keepOriginalFilenameDescription }}</SearchKeyword></template>
+						</MkSwitch>
+					</MkPreferenceContainer>
+				</SearchMarker>
+
+				<SearchMarker :keywords="['always', 'default', 'mark', 'nsfw', 'sensitive', 'media', 'file']">
+					<MkSwitch v-model="alwaysMarkNsfw" @update:modelValue="saveProfile()">
+						<template #label><SearchLabel>{{ i18n.ts.alwaysMarkSensitive }}</SearchLabel></template>
+					</MkSwitch>
+				</SearchMarker>
+
+				<SearchMarker :keywords="['auto', 'nsfw', 'sensitive', 'media', 'file']">
+					<MkSwitch v-model="autoSensitive" @update:modelValue="saveProfile()">
+						<template #label><SearchLabel>{{ i18n.ts.enableAutoSensitive }}</SearchLabel><span class="_beta">{{ i18n.ts.beta }}</span></template>
+						<template #caption><SearchKeyword>{{ i18n.ts.enableAutoSensitiveDescription }}</SearchKeyword></template>
+					</MkSwitch>
+				</SearchMarker>
 			</div>
-			<FormSplit>
-				<MkKeyValue>
-					<template #key>{{ i18n.ts.capacity }}</template>
-					<template #value>{{ bytes(capacity, 1) }}</template>
-				</MkKeyValue>
-				<MkKeyValue>
-					<template #key>{{ i18n.ts.inUse }}</template>
-					<template #value>{{ bytes(usage, 1) }}</template>
-				</MkKeyValue>
-			</FormSplit>
-		</div>
-	</FormSection>
-
-	<FormSection>
-		<template #label>{{ i18n.ts.statistics }}</template>
-		<MkChart src="per-user-drive" :args="{ user: $i }" span="day" :limit="7 * 5" :bar="true" :stacked="true" :detailed="false" :aspect-ratio="6"/>
-	</FormSection>
-
-	<FormSection>
-		<div class="_gaps_m">
-			<FormLink @click="chooseUploadFolder()">
-				{{ i18n.ts.uploadFolder }}
-				<template #suffix>{{ uploadFolder ? uploadFolder.name : '-' }}</template>
-				<template #suffixIcon><i class="fas fa-folder-open"></i></template>
-			</FormLink>
-			<MkSwitch v-model="keepOriginalUploading">
-				<template #label>{{ i18n.ts.keepOriginalUploading }}</template>
-				<template #caption>{{ i18n.ts.keepOriginalUploadingDescription }}</template>
-			</MkSwitch>
-			<MkSwitch v-model="alwaysMarkNsfw" @update:model-value="saveProfile()">
-				<template #label>{{ i18n.ts.alwaysMarkSensitive }}</template>
-			</MkSwitch>
-			<MkSwitch v-model="autoSensitive" @update:model-value="saveProfile()">
-				<template #label>{{ i18n.ts.enableAutoSensitive }}<span class="_beta">{{ i18n.ts.beta }}</span></template>
-				<template #caption>{{ i18n.ts.enableAutoSensitiveDescription }}</template>
-			</MkSwitch>
-		</div>
-	</FormSection>
-</div>
+		</FormSection>
+	</div>
+</SearchMarker>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
+import * as Misskey from 'misskey-js';
 import tinycolor from 'tinycolor2';
 import FormLink from '@/components/form/link.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import FormSection from '@/components/form/section.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import FormSplit from '@/components/form/split.vue';
-import * as os from '@/os';
-import bytes from '@/filters/bytes';
-import { defaultStore } from '@/store';
+import * as os from '@/os.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import bytes from '@/filters/bytes.js';
 import MkChart from '@/components/MkChart.vue';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
-import { $i } from '@/account';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
+import { ensureSignin } from '@/i.js';
+import { prefer } from '@/preferences.js';
+import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
+import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
+
+const $i = ensureSignin();
 
 const fetching = ref(true);
-const usage = ref<any>(null);
-const capacity = ref<any>(null);
-const uploadFolder = ref<any>(null);
-let alwaysMarkNsfw = $ref($i.alwaysMarkNsfw);
-let autoSensitive = $ref($i.autoSensitive);
+const usage = ref<number | null>(null);
+const capacity = ref<number | null>(null);
+const uploadFolder = ref<Misskey.entities.DriveFolder | null>(null);
+const alwaysMarkNsfw = ref($i.alwaysMarkNsfw);
+const autoSensitive = ref($i.autoSensitive);
 
 const meterStyle = computed(() => {
+	if (!capacity.value || !usage.value) return {};
 	return {
 		width: `${usage.value / capacity.value * 100}%`,
 		background: tinycolor({
 			h: 180 - (usage.value / capacity.value * 180),
 			s: 0.7,
 			l: 0.5,
-		}),
+		}).toHslString(),
 	};
 });
 
-const keepOriginalUploading = computed(defaultStore.makeGetterSetter('keepOriginalUploading'));
+const keepOriginalFilename = prefer.model('keepOriginalFilename');
 
-os.api('drive').then(info => {
+misskeyApi('drive').then(info => {
 	capacity.value = info.capacity;
 	usage.value = info.usage;
 	fetching.value = false;
 });
 
-if (defaultStore.state.uploadFolder) {
-	os.api('drive/folders/show', {
-		folderId: defaultStore.state.uploadFolder,
+if (prefer.s.uploadFolder) {
+	misskeyApi('drive/folders/show', {
+		folderId: prefer.s.uploadFolder,
 	}).then(response => {
 		uploadFolder.value = response;
 	});
@@ -100,11 +139,11 @@ if (defaultStore.state.uploadFolder) {
 
 function chooseUploadFolder() {
 	os.selectDriveFolder(false).then(async folder => {
-		defaultStore.set('uploadFolder', folder ? folder.id : null);
+		prefer.commit('uploadFolder', folder[0] ? folder[0].id : null);
 		os.success();
-		if (defaultStore.state.uploadFolder) {
-			uploadFolder.value = await os.api('drive/folders/show', {
-				folderId: defaultStore.state.uploadFolder,
+		if (prefer.s.uploadFolder) {
+			uploadFolder.value = await misskeyApi('drive/folders/show', {
+				folderId: prefer.s.uploadFolder,
 			});
 		} else {
 			uploadFolder.value = null;
@@ -113,38 +152,39 @@ function chooseUploadFolder() {
 }
 
 function saveProfile() {
-	os.api('i/update', {
-		alwaysMarkNsfw: !!alwaysMarkNsfw,
-		autoSensitive: !!autoSensitive,
+	misskeyApi('i/update', {
+		alwaysMarkNsfw: !!alwaysMarkNsfw.value,
+		autoSensitive: !!autoSensitive.value,
+	}).catch(err => {
+		os.alert({
+			type: 'error',
+			title: i18n.ts.error,
+			text: err.message,
+		});
+		alwaysMarkNsfw.value = true;
 	});
 }
 
-const headerActions = $computed(() => []);
+const headerActions = computed(() => []);
 
-const headerTabs = $computed(() => []);
+const headerTabs = computed(() => []);
 
-definePageMetadata({
+definePage(() => ({
 	title: i18n.ts.drive,
 	icon: 'ti ti-cloud',
-});
+}));
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss" module>
+.meter {
+	height: 10px;
+	background: rgba(0, 0, 0, 0.1);
+	border-radius: 999px;
+	overflow: clip;
+}
 
-@use "sass:math";
-
-.uawsfosz {
-
-	> .meter {
-		$size: 12px;
-		background: rgba(0, 0, 0, 0.1);
-		border-radius: math.div($size, 2);
-		overflow: hidden;
-
-		> div {
-			height: $size;
-			border-radius: math.div($size, 2);
-		}
-	}
+.meterValue {
+	height: 100%;
+	border-radius: 999px;
 }
 </style>

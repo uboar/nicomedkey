@@ -1,8 +1,12 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="800" :margin-min="16" :margin-max="32">
-		<FormSuspense :p="init">
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="800" :marginMin="16" :marginMax="32">
+		<FormSuspense :p="init" class="_gaps">
 			<MkInput v-model="title">
 				<template #label>{{ i18n.ts.title }}</template>
 			</MkInput>
@@ -11,7 +15,7 @@
 				<template #label>{{ i18n.ts.description }}</template>
 			</MkTextarea>
 
-			<div class="">
+			<div class="_gaps_s">
 				<div v-for="file in files" :key="file.id" class="wqugxsfx" :style="{ backgroundImage: file ? `url(${ file.thumbnailUrl })` : null }">
 					<div class="name">{{ file.name }}</div>
 					<button v-tooltip="i18n.ts.remove" class="remove _button" @click="remove(file)"><i class="ti ti-x"></i></button>
@@ -21,27 +25,31 @@
 
 			<MkSwitch v-model="isSensitive">{{ i18n.ts.markAsSensitive }}</MkSwitch>
 
-			<MkButton v-if="postId" primary @click="save"><i class="ti ti-device-floppy"></i> {{ i18n.ts.save }}</MkButton>
-			<MkButton v-else primary @click="save"><i class="ti ti-device-floppy"></i> {{ i18n.ts.publish }}</MkButton>
+			<div class="_buttons">
+				<MkButton v-if="postId" primary @click="save"><i class="ti ti-device-floppy"></i> {{ i18n.ts.save }}</MkButton>
+				<MkButton v-else primary @click="save"><i class="ti ti-device-floppy"></i> {{ i18n.ts.publish }}</MkButton>
 
-			<MkButton v-if="postId" danger @click="del"><i class="ti ti-trash"></i> {{ i18n.ts.delete }}</MkButton>
+				<MkButton v-if="postId" danger @click="del"><i class="ti ti-trash"></i> {{ i18n.ts.delete }}</MkButton>
+			</div>
 		</FormSuspense>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed, inject, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
+import * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import FormSuspense from '@/components/form/suspense.vue';
-import { selectFiles } from '@/scripts/select-file';
-import * as os from '@/os';
-import { useRouter } from '@/router';
-import { definePageMetadata } from '@/scripts/page-metadata';
-import { i18n } from '@/i18n';
+import { selectFiles } from '@/utility/select-file.js';
+import * as os from '@/os.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { definePage } from '@/page.js';
+import { i18n } from '@/i18n.js';
+import { useRouter } from '@/router.js';
 
 const router = useRouter();
 
@@ -49,38 +57,38 @@ const props = defineProps<{
 	postId?: string;
 }>();
 
-let init = $ref(null);
-let files = $ref([]);
-let description = $ref(null);
-let title = $ref(null);
-let isSensitive = $ref(false);
+const init = ref<(() => Promise<any>) | null>(null);
+const files = ref<Misskey.entities.DriveFile[]>([]);
+const description = ref<string | null>(null);
+const title = ref<string | null>(null);
+const isSensitive = ref(false);
 
 function selectFile(evt) {
 	selectFiles(evt.currentTarget ?? evt.target, null).then(selected => {
-		files = files.concat(selected);
+		files.value = files.value.concat(selected);
 	});
 }
 
 function remove(file) {
-	files = files.filter(f => f.id !== file.id);
+	files.value = files.value.filter(f => f.id !== file.id);
 }
 
 async function save() {
 	if (props.postId) {
 		await os.apiWithDialog('gallery/posts/update', {
 			postId: props.postId,
-			title: title,
-			description: description,
-			fileIds: files.map(file => file.id),
-			isSensitive: isSensitive,
+			title: title.value,
+			description: description.value,
+			fileIds: files.value.map(file => file.id),
+			isSensitive: isSensitive.value,
 		});
 		router.push(`/gallery/${props.postId}`);
 	} else {
 		const created = await os.apiWithDialog('gallery/posts/create', {
-			title: title,
-			description: description,
-			fileIds: files.map(file => file.id),
-			isSensitive: isSensitive,
+			title: title.value,
+			description: description.value,
+			fileIds: files.value.map(file => file.id),
+			isSensitive: isSensitive.value,
 		});
 		router.push(`/gallery/${created.id}`);
 	}
@@ -99,25 +107,22 @@ async function del() {
 }
 
 watch(() => props.postId, () => {
-	init = () => props.postId ? os.api('gallery/posts/show', {
+	init.value = () => props.postId ? misskeyApi('gallery/posts/show', {
 		postId: props.postId,
 	}).then(post => {
-		files = post.files;
-		title = post.title;
-		description = post.description;
-		isSensitive = post.isSensitive;
+		files.value = post.files ?? [];
+		title.value = post.title;
+		description.value = post.description;
+		isSensitive.value = post.isSensitive;
 	}) : Promise.resolve(null);
 }, { immediate: true });
 
-const headerActions = $computed(() => []);
+const headerActions = computed(() => []);
 
-const headerTabs = $computed(() => []);
+const headerTabs = computed(() => []);
 
-definePageMetadata(computed(() => props.postId ? {
-	title: i18n.ts.edit,
-	icon: 'ti ti-pencil',
-} : {
-	title: i18n.ts.postToGallery,
+definePage(() => ({
+	title: props.postId ? i18n.ts.edit : i18n.ts.postToGallery,
 	icon: 'ti ti-pencil',
 }));
 </script>
@@ -135,7 +140,7 @@ definePageMetadata(computed(() => props.postId ? {
 		top: 8px;
 		left: 9px;
 		padding: 8px;
-		background: var(--panel);
+		background: var(--MI_THEME-panel);
 	}
 
 	> .remove {
@@ -143,7 +148,7 @@ definePageMetadata(computed(() => props.postId ? {
 		top: 8px;
 		right: 9px;
 		padding: 8px;
-		background: var(--panel);
+		background: var(--MI_THEME-panel);
 	}
 }
 </style>

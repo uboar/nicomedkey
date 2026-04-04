@@ -1,9 +1,13 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="800" :margin-min="16" :margin-max="32">
+<PageWithHeader :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="800" :marginMin="16" :marginMax="32">
 		<div class="cwepdizn _gaps_m">
-			<MkFolder :default-open="true">
+			<MkFolder :defaultOpen="true">
 				<template #label>{{ i18n.ts.backgroundColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
@@ -19,7 +23,7 @@
 				</div>
 			</MkFolder>
 
-			<MkFolder :default-open="true">
+			<MkFolder :defaultOpen="true">
 				<template #label>{{ i18n.ts.accentColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
@@ -30,7 +34,7 @@
 				</div>
 			</MkFolder>
 
-			<MkFolder :default-open="true">
+			<MkFolder :defaultOpen="true">
 				<template #label>{{ i18n.ts.textColor }}</template>
 				<div class="cwepdizn-colors">
 					<div class="row">
@@ -41,19 +45,19 @@
 				</div>
 			</MkFolder>
 
-			<MkFolder :default-open="false">
+			<MkFolder :defaultOpen="false">
 				<template #icon><i class="ti ti-code"></i></template>
 				<template #label>{{ i18n.ts.editCode }}</template>
 
 				<div class="_gaps_m">
-					<MkTextarea v-model="themeCode" tall>
+					<MkCodeEditor v-model="themeCode" lang="json5">
 						<template #label>{{ i18n.ts._theme.code }}</template>
-					</MkTextarea>
+					</MkCodeEditor>
 					<MkButton primary @click="applyThemeCode">{{ i18n.ts.apply }}</MkButton>
 				</div>
 			</MkFolder>
 
-			<MkFolder :default-open="false">
+			<MkFolder :defaultOpen="false">
 				<template #label>{{ i18n.ts.addDescription }}</template>
 
 				<div class="_gaps_m">
@@ -64,31 +68,31 @@
 			</MkFolder>
 		</div>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { watch } from 'vue';
-import { toUnicode } from 'punycode/';
+import { watch, ref, computed } from 'vue';
+import { toUnicode } from 'punycode.js';
 import tinycolor from 'tinycolor2';
 import { v4 as uuid } from 'uuid';
 import JSON5 from 'json5';
-
+import lightTheme from '@@/themes/_light.json5';
+import darkTheme from '@@/themes/_dark.json5';
+import { host } from '@@/js/config.js';
+import type { Theme } from '@/theme.js';
 import MkButton from '@/components/MkButton.vue';
+import MkCodeEditor from '@/components/MkCodeEditor.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkFolder from '@/components/MkFolder.vue';
-
-import { $i } from '@/account';
-import { Theme, applyTheme } from '@/scripts/theme';
-import lightTheme from '@/themes/_light.json5';
-import darkTheme from '@/themes/_dark.json5';
-import { host } from '@/config';
-import * as os from '@/os';
-import { ColdDeviceStorage, defaultStore } from '@/store';
-import { addTheme } from '@/theme-store';
-import { i18n } from '@/i18n';
-import { useLeaveGuard } from '@/scripts/use-leave-guard';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import { $i } from '@/i.js';
+import { addTheme, applyTheme } from '@/theme.js';
+import * as os from '@/os.js';
+import { store } from '@/store.js';
+import { i18n } from '@/i18n.js';
+import { useLeaveGuard } from '@/use/use-leave-guard.js';
+import { definePage } from '@/page.js';
+import { prefer } from '@/preferences.js';
 
 const bgColors = [
 	{ color: '#f5f5f5', kind: 'light', forPreview: '#f5f5f5' },
@@ -119,57 +123,57 @@ const fgColors = [
 	{ color: 'pink', forLight: '#84667d', forDark: '#e4d1e0', forPreview: '#b12390' },
 ];
 
-let theme = $ref<Partial<Theme>>({
+const theme = ref<Partial<Theme>>({
 	base: 'light',
 	props: lightTheme.props,
 });
-let description = $ref<string | null>(null);
-let themeCode = $ref<string | null>(null);
-let changed = $ref(false);
+const description = ref<string | null>(null);
+const themeCode = ref<string | null>(null);
+const changed = ref(false);
 
-useLeaveGuard($$(changed));
+useLeaveGuard(changed);
 
 function showPreview() {
 	os.pageWindow('/preview');
 }
 
 function setBgColor(color: typeof bgColors[number]) {
-	if (theme.base !== color.kind) {
+	if (theme.value.base !== color.kind) {
 		const base = color.kind === 'dark' ? darkTheme : lightTheme;
 		for (const prop of Object.keys(base.props)) {
 			if (prop === 'accent') continue;
 			if (prop === 'fg') continue;
-			theme.props[prop] = base.props[prop];
+			theme.value.props[prop] = base.props[prop];
 		}
 	}
-	theme.base = color.kind;
-	theme.props.bg = color.color;
+	theme.value.base = color.kind;
+	theme.value.props.bg = color.color;
 
-	if (theme.props.fg) {
-		const matchedFgColor = fgColors.find(x => [tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(tinycolor(theme.props.fg).toRgbString()));
+	if (theme.value.props.fg) {
+		const matchedFgColor = fgColors.find(x => [tinycolor(x.forLight).toRgbString(), tinycolor(x.forDark).toRgbString()].includes(tinycolor(theme.value.props.fg).toRgbString()));
 		if (matchedFgColor) setFgColor(matchedFgColor);
 	}
 }
 
 function setAccentColor(color) {
-	theme.props.accent = color;
+	theme.value.props.accent = color;
 }
 
 function setFgColor(color) {
-	theme.props.fg = theme.base === 'light' ? color.forLight : color.forDark;
+	theme.value.props.fg = theme.value.base === 'light' ? color.forLight : color.forDark;
 }
 
 function apply() {
-	themeCode = JSON5.stringify(theme, null, '\t');
-	applyTheme(theme, false);
-	changed = true;
+	themeCode.value = JSON5.stringify(theme.value, null, '\t');
+	applyTheme(theme.value, false);
+	changed.value = true;
 }
 
 function applyThemeCode() {
 	let parsed;
 
 	try {
-		parsed = JSON5.parse(themeCode);
+		parsed = JSON5.parse(themeCode.value);
 	} catch (err) {
 		os.alert({
 			type: 'error',
@@ -178,37 +182,37 @@ function applyThemeCode() {
 		return;
 	}
 
-	theme = parsed;
+	theme.value = parsed;
 }
 
 async function saveAs() {
 	const { canceled, result: name } = await os.inputText({
 		title: i18n.ts.name,
-		allowEmpty: false,
+		minLength: 1,
 	});
 	if (canceled) return;
 
-	theme.id = uuid();
-	theme.name = name;
-	theme.author = `@${$i.username}@${toUnicode(host)}`;
-	if (description) theme.desc = description;
-	await addTheme(theme);
-	applyTheme(theme);
-	if (defaultStore.state.darkMode) {
-		ColdDeviceStorage.set('darkTheme', theme);
+	theme.value.id = uuid();
+	theme.value.name = name;
+	theme.value.author = `@${$i.username}@${toUnicode(host)}`;
+	if (description.value) theme.value.desc = description.value;
+	await addTheme(theme.value);
+	applyTheme(theme.value);
+	if (store.s.darkMode) {
+		prefer.commit('darkTheme', theme.value);
 	} else {
-		ColdDeviceStorage.set('lightTheme', theme);
+		prefer.commit('lightTheme', theme.value);
 	}
-	changed = false;
+	changed.value = false;
 	os.alert({
 		type: 'success',
-		text: i18n.t('_theme.installed', { name: theme.name }),
+		text: i18n.tsx._theme.installed({ name: theme.value.name }),
 	});
 }
 
-watch($$(theme), apply, { deep: true });
+watch(theme, apply, { deep: true });
 
-const headerActions = $computed(() => [{
+const headerActions = computed(() => [{
 	asFullButton: true,
 	icon: 'ti ti-eye',
 	text: i18n.ts.preview,
@@ -220,12 +224,12 @@ const headerActions = $computed(() => [{
 	handler: saveAs,
 }]);
 
-const headerTabs = $computed(() => []);
+const headerTabs = computed(() => []);
 
-definePageMetadata({
+definePage(() => ({
 	title: i18n.ts.themeEditor,
 	icon: 'ti ti-palette',
-});
+}));
 </script>
 
 <style lang="scss" scoped>
@@ -262,7 +266,7 @@ definePageMetadata({
 				}
 
 				&.active {
-					box-shadow: 0 0 0 2px var(--divider) inset;
+					box-shadow: 0 0 0 2px var(--MI_THEME-divider) inset;
 				}
 
 				&.rounded {

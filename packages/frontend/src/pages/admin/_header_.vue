@@ -1,11 +1,16 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div ref="el" class="fdidabkc" :style="{ background: bg }" @click="onClick">
-	<template v-if="metadata">
+	<template v-if="pageMetadata">
 		<div class="titleContainer" @click="showTabsPopup">
-			<i v-if="metadata.icon" class="icon" :class="metadata.icon"></i>
+			<i v-if="pageMetadata.icon" class="icon" :class="pageMetadata.icon"></i>
 
 			<div class="title">
-				<div class="title">{{ metadata.title }}</div>
+				<div class="title">{{ pageMetadata.title }}</div>
 			</div>
 		</div>
 		<div class="tabs">
@@ -19,8 +24,8 @@
 	<div class="buttons right">
 		<template v-if="actions">
 			<template v-for="action in actions">
-				<MkButton v-if="action.asFullButton" class="fullButton" primary @click.stop="action.handler"><i :class="action.icon" style="margin-right: 6px;"></i>{{ action.text }}</MkButton>
-				<button v-else v-tooltip.noDelay="action.text" class="_button button" :class="{ highlighted: action.highlighted }" @click.stop="action.handler" @touchstart="preventDrag"><i :class="action.icon"></i></button>
+				<MkButton v-if="action.asFullButton" class="fullButton" primary :disabled="action.disabled" @click.stop="action.handler"><i :class="action.icon" style="margin-right: 6px;"></i>{{ action.text }}</MkButton>
+				<button v-else v-tooltip.noDelay="action.text" class="_button button" :class="{ highlighted: action.highlighted }" :disabled="action.disabled" @click.stop="action.handler" @touchstart="preventDrag"><i :class="action.icon"></i></button>
 			</template>
 		</template>
 	</div>
@@ -28,15 +33,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref, shallowRef, inject, watch, nextTick } from 'vue';
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, nextTick, inject } from 'vue';
 import tinycolor from 'tinycolor2';
-import { popupMenu } from '@/os';
-import { url } from '@/config';
-import { scrollToTop } from '@/scripts/scroll';
+import { scrollToTop } from '@@/js/scroll.js';
+import { popupMenu } from '@/os.js';
 import MkButton from '@/components/MkButton.vue';
-import { i18n } from '@/i18n';
-import { globalEvents } from '@/events';
-import { injectPageMetadata } from '@/scripts/page-metadata';
+import { globalEvents } from '@/events.js';
+import { DI } from '@/di.js';
 
 type Tab = {
 	key?: string | null;
@@ -53,6 +56,7 @@ const props = defineProps<{
 		text: string;
 		icon: string;
 		asFullButton?: boolean;
+		disabled?: boolean;
 		handler: (ev: MouseEvent) => void;
 	}[];
 	thin?: boolean;
@@ -62,12 +66,12 @@ const emit = defineEmits<{
 	(ev: 'update:tab', key: string);
 }>();
 
-const metadata = injectPageMetadata();
+const pageMetadata = inject(DI.pageMetadata, ref(null));
 
-const el = shallowRef<HTMLElement>(null);
+const el = useTemplateRef('el');
+const tabHighlightEl = useTemplateRef('tabHighlightEl');
 const tabRefs = {};
-const tabHighlightEl = $shallowRef<HTMLElement | null>(null);
-const bg = ref(null);
+const bg = ref<string | null>(null);
 const height = ref(0);
 const hasTabs = computed(() => {
 	return props.tabs && props.tabs.length > 0;
@@ -115,26 +119,26 @@ function onTabClick(tab: Tab, ev: MouseEvent): void {
 }
 
 const calcBg = () => {
-	const rawBg = metadata?.bg || 'var(--bg)';
-	const tinyBg = tinycolor(rawBg.startsWith('var(') ? getComputedStyle(document.documentElement).getPropertyValue(rawBg.slice(4, -1)) : rawBg);
+	const rawBg = pageMetadata.value.bg ?? 'var(--MI_THEME-bg)';
+	const tinyBg = tinycolor(rawBg.startsWith('var(') ? getComputedStyle(window.document.documentElement).getPropertyValue(rawBg.slice(4, -1)) : rawBg);
 	tinyBg.setAlpha(0.85);
 	bg.value = tinyBg.toRgbString();
 };
 
 onMounted(() => {
 	calcBg();
-	globalEvents.on('themeChanged', calcBg);
+	globalEvents.on('themeChanging', calcBg);
 
 	watch(() => [props.tab, props.tabs], () => {
 		nextTick(() => {
 			const tabEl = tabRefs[props.tab];
-			if (tabEl && tabHighlightEl) {
+			if (tabEl && tabHighlightEl.value) {
 				// offsetWidth や offsetLeft は少数を丸めてしまうため getBoundingClientRect を使う必要がある
 				// https://developer.mozilla.org/ja/docs/Web/API/HTMLElement/offsetWidth#%E5%80%A4
 				const parentRect = tabEl.parentElement.getBoundingClientRect();
 				const rect = tabEl.getBoundingClientRect();
-				tabHighlightEl.style.width = rect.width + 'px';
-				tabHighlightEl.style.left = (rect.left - parentRect.left) + 'px';
+				tabHighlightEl.value.style.width = rect.width + 'px';
+				tabHighlightEl.value.style.left = (rect.left - parentRect.left) + 'px';
 			}
 		});
 	}, {
@@ -143,7 +147,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	globalEvents.off('themeChanged', calcBg);
+	globalEvents.off('themeChanging', calcBg);
 });
 </script>
 
@@ -152,8 +156,8 @@ onUnmounted(() => {
 	--height: 60px;
 	display: flex;
 	width: 100%;
-	-webkit-backdrop-filter: var(--blur, blur(15px));
-	backdrop-filter: var(--blur, blur(15px));
+	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
+	backdrop-filter: var(--MI-blur, blur(15px));
 
 	> .buttons {
 		--margin: 8px;
@@ -185,7 +189,7 @@ onUnmounted(() => {
 			}
 
 			&.highlighted {
-				color: var(--accent);
+				color: var(--MI_THEME-accent);
 			}
 		}
 
@@ -282,7 +286,7 @@ onUnmounted(() => {
 			position: absolute;
 			bottom: 0;
 			height: 3px;
-			background: var(--accent);
+			background: var(--MI_THEME-accent);
 			border-radius: 999px;
 			transition: all 0.2s ease;
 			pointer-events: none;

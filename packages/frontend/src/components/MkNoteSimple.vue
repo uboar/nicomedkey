@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div :class="$style.root">
 	<MkAvatar :class="$style.avatar" :user="note.user" link preview/>
@@ -5,8 +10,8 @@
 		<MkNoteHeader :class="$style.header" :note="note" :mini="true"/>
 		<div>
 			<p v-if="note.cw != null" :class="$style.cw">
-				<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :i="$i" :emoji-urls="note.emojis"/>
-				<MkCwButton v-model="showContent" :note="note"/>
+				<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'" :emojiUrls="note.emojis"/>
+				<MkCwButton v-model="showContent" :text="note.text" :files="note.files" :poll="note.poll"/>
 			</p>
 			<div v-show="note.cw == null || showContent">
 				<MkSubNoteContent :class="$style.text" :note="note"/>
@@ -17,18 +22,17 @@
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
-import * as misskey from 'misskey-js';
+import { ref } from 'vue';
+import * as Misskey from 'misskey-js';
 import MkNoteHeader from '@/components/MkNoteHeader.vue';
 import MkSubNoteContent from '@/components/MkSubNoteContent.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 
 const props = defineProps<{
-	note: misskey.entities.Note;
-	pinned?: boolean;
+	note: Misskey.entities.Note;
 }>();
 
-const showContent = $ref(false);
+const showContent = ref(false);
 </script>
 
 <style lang="scss" module>
@@ -36,7 +40,6 @@ const showContent = $ref(false);
 	display: flex;
 	margin: 0;
 	padding: 0;
-	overflow: clip;
 	font-size: 0.95em;
 }
 
@@ -44,9 +47,12 @@ const showContent = $ref(false);
 	flex-shrink: 0;
 	display: block;
 	margin: 0 10px 0 0;
-	width: 40px;
-	height: 40px;
+	width: 34px;
+	height: 34px;
 	border-radius: 8px;
+	position: sticky !important;
+	top: calc(16px + var(--MI-stickyTop, 0px));
+	left: 0;
 }
 
 .main {
@@ -70,6 +76,14 @@ const showContent = $ref(false);
 	cursor: default;
 	margin: 0;
 	padding: 0;
+}
+
+@container (min-width: 250px) {
+	.avatar {
+		margin: 0 10px 0 0;
+		width: 40px;
+		height: 40px;
+	}
 }
 
 @container (min-width: 350px) {

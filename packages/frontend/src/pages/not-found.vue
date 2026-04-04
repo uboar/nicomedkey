@@ -1,22 +1,38 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div class="ipledcug">
+<div>
 	<div class="_fullinfo">
-		<img src="https://xn--931a.moe/assets/not-found.jpg" class="_ghost"/>
+		<img :src="notFoundImageUrl" draggable="false"/>
 		<div>{{ i18n.ts.notFoundDescription }}</div>
 	</div>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import { computed } from 'vue';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
+import { pleaseLogin } from '@/utility/please-login.js';
+import { notFoundImageUrl } from '@/instance.js';
 
-const headerActions = $computed(() => []);
+const props = defineProps<{
+	showLoginPopup?: boolean;
+}>();
 
-const headerTabs = $computed(() => []);
+if (props.showLoginPopup) {
+	pleaseLogin({ path: '/' });
+}
 
-definePageMetadata({
+const headerActions = computed(() => []);
+
+const headerTabs = computed(() => []);
+
+definePage(() => ({
 	title: i18n.ts.notFound,
 	icon: 'ti ti-alert-triangle',
-});
+}));
 </script>

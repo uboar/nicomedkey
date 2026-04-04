@@ -1,21 +1,25 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="1400">
-		<div class="_root">
+<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="1400">
+		<MkHorizontalSwipe v-model:tab="tab" :tabs="headerTabs">
 			<div v-if="tab === 'explore'">
 				<MkFoldableSection class="_margin">
 					<template #header><i class="ti ti-clock"></i>{{ i18n.ts.recentPosts }}</template>
-					<MkPagination v-slot="{items}" :pagination="recentPostsPagination" :disable-auto-load="true">
-						<div class="vfpdbgtk">
+					<MkPagination v-slot="{items}" :pagination="recentPostsPagination" :disableAutoLoad="true">
+						<div :class="$style.items">
 							<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
 						</div>
 					</MkPagination>
 				</MkFoldableSection>
 				<MkFoldableSection class="_margin">
 					<template #header><i class="ti ti-comet"></i>{{ i18n.ts.popularPosts }}</template>
-					<MkPagination v-slot="{items}" :pagination="popularPostsPagination" :disable-auto-load="true">
-						<div class="vfpdbgtk">
+					<MkPagination v-slot="{items}" :pagination="popularPostsPagination" :disableAutoLoad="true">
+						<div :class="$style.items">
 							<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
 						</div>
 					</MkPagination>
@@ -23,7 +27,7 @@
 			</div>
 			<div v-else-if="tab === 'liked'">
 				<MkPagination v-slot="{items}" :pagination="likedPostsPagination">
-					<div class="vfpdbgtk">
+					<div :class="$style.items">
 						<MkGalleryPostPreview v-for="like in items" :key="like.id" :post="like.post" class="post"/>
 					</div>
 				</MkPagination>
@@ -31,30 +35,25 @@
 			<div v-else-if="tab === 'my'">
 				<MkA to="/gallery/new" class="_link" style="margin: 16px;"><i class="ti ti-plus"></i> {{ i18n.ts.postToGallery }}</MkA>
 				<MkPagination v-slot="{items}" :pagination="myPostsPagination">
-					<div class="vfpdbgtk">
+					<div :class="$style.items">
 						<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
 					</div>
 				</MkPagination>
 			</div>
-		</div>
+		</MkHorizontalSwipe>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed, defineComponent, watch } from 'vue';
-import XUserList from '@/components/MkUserList.vue';
+import { watch, ref, computed } from 'vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkTab from '@/components/MkTab.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkGalleryPostPreview from '@/components/MkGalleryPostPreview.vue';
-import number from '@/filters/number';
-import * as os from '@/os';
-import { definePageMetadata } from '@/scripts/page-metadata';
-import { i18n } from '@/i18n';
-import { useRouter } from '@/router';
+import MkHorizontalSwipe from '@/components/MkHorizontalSwipe.vue';
+import { definePage } from '@/page.js';
+import { i18n } from '@/i18n.js';
+import { useRouter } from '@/router.js';
 
 const router = useRouter();
 
@@ -62,9 +61,9 @@ const props = defineProps<{
 	tag?: string;
 }>();
 
-let tab = $ref('explore');
-let tags = $ref([]);
-let tagsRef = $ref();
+const tab = ref('explore');
+const tags = ref([]);
+const tagsRef = ref();
 
 const recentPostsPagination = {
 	endpoint: 'gallery/posts' as const,
@@ -72,7 +71,7 @@ const recentPostsPagination = {
 };
 const popularPostsPagination = {
 	endpoint: 'gallery/featured' as const,
-	limit: 5,
+	noPaging: true,
 };
 const myPostsPagination = {
 	endpoint: 'i/gallery/posts' as const,
@@ -83,21 +82,21 @@ const likedPostsPagination = {
 	limit: 5,
 };
 
-const tagUsersPagination = $computed(() => ({
+const tagUsersPagination = computed(() => ({
 	endpoint: 'hashtags/users' as const,
 	limit: 30,
 	params: {
-		tag: this.tag,
+		tag: props.tag,
 		origin: 'combined',
 		sort: '+follower',
 	},
 }));
 
 watch(() => props.tag, () => {
-	if (tagsRef) tagsRef.tags.toggleContent(props.tag == null);
+	if (tagsRef.value) tagsRef.value.tags.toggleContent(props.tag == null);
 });
 
-const headerActions = $computed(() => [{
+const headerActions = computed(() => [{
 	icon: 'ti ti-plus',
 	text: i18n.ts.create,
 	handler: () => {
@@ -105,7 +104,7 @@ const headerActions = $computed(() => [{
 	},
 }]);
 
-const headerTabs = $computed(() => [{
+const headerTabs = computed(() => [{
 	key: 'explore',
 	title: i18n.ts.gallery,
 	icon: 'ti ti-icons',
@@ -119,21 +118,17 @@ const headerTabs = $computed(() => [{
 	icon: 'ti ti-edit',
 }]);
 
-definePageMetadata({
+definePage(() => ({
 	title: i18n.ts.gallery,
 	icon: 'ti ti-icons',
-});
+}));
 </script>
 
-<style lang="scss" scoped>
-.vfpdbgtk {
+<style lang="scss" module>
+.items {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 	grid-gap: 12px;
-	margin: 0 var(--margin);
-
-	> .post {
-
-	}
+	margin: 0 var(--MI-margin);
 }
 </style>

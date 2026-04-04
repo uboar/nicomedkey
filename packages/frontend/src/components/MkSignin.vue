@@ -1,192 +1,292 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<form class="eppvobhk" :class="{ signing, totpLogin }" @submit.prevent="onSubmit">
-	<div class="auth _gaps_m">
-		<div v-show="withAvatar" class="avatar" :style="{ backgroundImage: user ? `url('${ user.avatarUrl }')` : null, marginBottom: message ? '1.5em' : null }"></div>
-		<MkInfo v-if="message">
-			{{ message }}
-		</MkInfo>
-		<div v-if="!totpLogin" class="normal-signin _gaps_m">
-			<MkInput v-model="username" :placeholder="i18n.ts.username" type="text" pattern="^[a-zA-Z0-9_]+$" :spellcheck="false" autocomplete="username" autofocus required data-cy-signin-username @update:model-value="onUsernameChange">
-				<template #prefix>@</template>
-				<template #suffix>@{{ host }}</template>
-			</MkInput>
-			<MkInput v-if="!user || user && !user.usePasswordLessLogin" v-model="password" :placeholder="i18n.ts.password" type="password" :with-password-toggle="true" required data-cy-signin-password>
-				<template #prefix><i class="ti ti-lock"></i></template>
-				<template #caption><button class="_textButton" type="button" @click="resetPassword">{{ i18n.ts.forgotPassword }}</button></template>
-			</MkInput>
-			<MkButton type="submit" large primary rounded :disabled="signing" style="margin: 0 auto;">{{ signing ? i18n.ts.loggingIn : i18n.ts.login }}</MkButton>
-		</div>
-		<div v-if="totpLogin" class="2fa-signin" :class="{ securityKeys: user && user.securityKeys }">
-			<div v-if="user && user.securityKeys" class="twofa-group tap-group">
-				<p>{{ i18n.ts.tapSecurityKey }}</p>
-				<MkButton v-if="!queryingKey" @click="queryKey">
-					{{ i18n.ts.retry }}
-				</MkButton>
-			</div>
-			<div v-if="user && user.securityKeys" class="or-hr">
-				<p class="or-msg">{{ i18n.ts.or }}</p>
-			</div>
-			<div class="twofa-group totp-group">
-				<p style="margin-bottom:0;">{{ i18n.ts.twoStepAuthentication }}</p>
-				<MkInput v-if="user && user.usePasswordLessLogin" v-model="password" type="password" :with-password-toggle="true" required>
-					<template #label>{{ i18n.ts.password }}</template>
-					<template #prefix><i class="ti ti-lock"></i></template>
-				</MkInput>
-				<MkInput v-model="token" type="text" pattern="^[0-9]{6}$" autocomplete="off" :spellcheck="false" required>
-					<template #label>{{ i18n.ts.token }}</template>
-					<template #prefix><i class="ti ti-123"></i></template>
-				</MkInput>
-				<MkButton type="submit" :disabled="signing" large primary rounded style="margin: 0 auto;">{{ signing ? i18n.ts.loggingIn : i18n.ts.login }}</MkButton>
-			</div>
-		</div>
+<div :class="$style.signinRoot">
+	<Transition
+		mode="out-in"
+		:enterActiveClass="$style.transition_enterActive"
+		:leaveActiveClass="$style.transition_leaveActive"
+		:enterFromClass="$style.transition_enterFrom"
+		:leaveToClass="$style.transition_leaveTo"
+
+		:inert="waiting"
+	>
+		<!-- 1. 外部サーバーへの転送・username入力・パスキー -->
+		<XInput
+			v-if="page === 'input'"
+			key="input"
+			:message="message"
+			:openOnRemote="openOnRemote"
+
+			@usernameSubmitted="onUsernameSubmitted"
+			@passkeyClick="onPasskeyLogin"
+		/>
+
+		<!-- 2. パスワード入力 -->
+		<XPassword
+			v-else-if="page === 'password'"
+			key="password"
+			ref="passwordPageEl"
+
+			:user="userInfo!"
+			:needCaptcha="needCaptcha"
+
+			@passwordSubmitted="onPasswordSubmitted"
+		/>
+
+		<!-- 3. ワンタイムパスワード -->
+		<XTotp
+			v-else-if="page === 'totp'"
+			key="totp"
+
+			@totpSubmitted="onTotpSubmitted"
+		/>
+
+		<!-- 4. パスキー -->
+		<XPasskey
+			v-else-if="page === 'passkey'"
+			key="passkey"
+
+			:credentialRequest="credentialRequest!"
+			:isPerformingPasswordlessLogin="doingPasskeyFromInputPage"
+
+			@done="onPasskeyDone"
+			@useTotp="onUseTotp"
+		/>
+	</Transition>
+	<div v-if="waiting" :class="$style.waitingRoot">
+		<MkLoading/>
 	</div>
-</form>
+</div>
 </template>
 
-<script lang="ts" setup>
-import { defineAsyncComponent } from 'vue';
-import { toUnicode } from 'punycode/';
-import { showSuspendedDialog } from '../scripts/show-suspended-dialog';
-import MkButton from '@/components/MkButton.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkInfo from '@/components/MkInfo.vue';
-import { apiUrl, host as configHost } from '@/config';
-import { byteify, hexify } from '@/scripts/2fa';
-import * as os from '@/os';
-import { login } from '@/account';
-import { instance } from '@/instance';
-import { i18n } from '@/i18n';
+<script setup lang="ts">
+import { nextTick, onBeforeUnmount, ref, shallowRef, useTemplateRef } from 'vue';
+import * as Misskey from 'misskey-js';
+import { supported as webAuthnSupported, parseRequestOptionsFromJSON } from '@github/webauthn-json/browser-ponyfill';
+import type { AuthenticationPublicKeyCredential } from '@github/webauthn-json/browser-ponyfill';
+import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
+import type { PwResponse } from '@/components/MkSignin.password.vue';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
+import { i18n } from '@/i18n.js';
+import * as os from '@/os.js';
 
-let signing = $ref(false);
-let user = $ref(null);
-let username = $ref('');
-let password = $ref('');
-let token = $ref('');
-let host = $ref(toUnicode(configHost));
-let totpLogin = $ref(false);
-let credential = $ref(null);
-let challengeData = $ref(null);
-let queryingKey = $ref(false);
-let hCaptchaResponse = $ref(null);
-let reCaptchaResponse = $ref(null);
-
-const meta = $computed(() => instance);
+import XInput from '@/components/MkSignin.input.vue';
+import XPassword from '@/components/MkSignin.password.vue';
+import XTotp from '@/components/MkSignin.totp.vue';
+import XPasskey from '@/components/MkSignin.passkey.vue';
+import { login } from '@/accounts.js';
 
 const emit = defineEmits<{
-	(ev: 'login', v: any): void;
+	(ev: 'login', v: Misskey.entities.SigninFlowResponse & { finished: true }): void;
 }>();
 
-const props = defineProps({
-	withAvatar: {
-		type: Boolean,
-		required: false,
-		default: true,
-	},
-	autoSet: {
-		type: Boolean,
-		required: false,
-		default: false,
-	},
-	message: {
-		type: String,
-		required: false,
-		default: '',
-	},
+const props = withDefaults(defineProps<{
+	autoSet?: boolean;
+	message?: string,
+	openOnRemote?: OpenOnRemoteOptions,
+}>(), {
+	autoSet: false,
+	message: '',
+	openOnRemote: undefined,
 });
 
-function onUsernameChange() {
-	os.api('users/show', {
-		username: username,
-	}).then(userResponse => {
-		user = userResponse;
-	}, () => {
-		user = null;
-	});
-}
+const page = ref<'input' | 'password' | 'totp' | 'passkey'>('input');
+const waiting = ref(false);
 
-function onLogin(res) {
-	if (props.autoSet) {
-		return login(res.i);
+const passwordPageEl = useTemplateRef('passwordPageEl');
+const needCaptcha = ref(false);
+
+const userInfo = ref<null | Misskey.entities.UserDetailed>(null);
+const password = ref('');
+
+//#region Passkey Passwordless
+const credentialRequest = shallowRef<CredentialRequestOptions | null>(null);
+const passkeyContext = ref('');
+const doingPasskeyFromInputPage = ref(false);
+
+function onPasskeyLogin(): void {
+	if (webAuthnSupported()) {
+		doingPasskeyFromInputPage.value = true;
+		waiting.value = true;
+		misskeyApi('signin-with-passkey', {})
+			.then((res) => {
+				passkeyContext.value = res.context ?? '';
+				credentialRequest.value = parseRequestOptionsFromJSON({
+					publicKey: res.option,
+				});
+
+				page.value = 'passkey';
+				waiting.value = false;
+			})
+			.catch(onSigninApiError);
 	}
 }
 
-function queryKey() {
-	queryingKey = true;
-	return navigator.credentials.get({
-		publicKey: {
-			challenge: byteify(challengeData.challenge, 'base64'),
-			allowCredentials: challengeData.securityKeys.map(key => ({
-				id: byteify(key.id, 'hex'),
-				type: 'public-key',
-				transports: ['usb', 'nfc', 'ble', 'internal'],
-			})),
-			timeout: 60 * 1000,
-		},
-	}).catch(() => {
-		queryingKey = false;
-		return Promise.reject(null);
-	}).then(credential => {
-		queryingKey = false;
-		signing = true;
-		return os.api('signin', {
-			username,
-			password,
-			signature: hexify(credential.response.signature),
-			authenticatorData: hexify(credential.response.authenticatorData),
-			clientDataJSON: hexify(credential.response.clientDataJSON),
-			credentialId: credential.id,
-			challengeId: challengeData.challengeId,
-			'hcaptcha-response': hCaptchaResponse,
-			'g-recaptcha-response': reCaptchaResponse,
+function onPasskeyDone(credential: AuthenticationPublicKeyCredential): void {
+	waiting.value = true;
+
+	if (doingPasskeyFromInputPage.value) {
+		misskeyApi('signin-with-passkey', {
+			credential: credential.toJSON(),
+			context: passkeyContext.value,
+		}).then((res) => {
+			if (res.signinResponse == null) {
+				onSigninApiError();
+				return;
+			}
+			emit('login', res.signinResponse);
+			onLoginSucceeded(res.signinResponse);
+		}).catch(onSigninApiError);
+	} else if (userInfo.value != null) {
+		tryLogin({
+			username: userInfo.value.username,
+			password: password.value,
+			credential: credential.toJSON(),
 		});
-	}).then(res => {
-		emit('login', res);
-		return onLogin(res);
-	}).catch(err => {
-		if (err === null) return;
-		os.alert({
+	}
+}
+
+function onUseTotp(): void {
+	page.value = 'totp';
+}
+//#endregion
+
+async function onUsernameSubmitted(username: string) {
+	waiting.value = true;
+
+	userInfo.value = await misskeyApi('users/show', {
+		username,
+	}).catch(() => null);
+
+	await tryLogin({
+		username,
+	});
+}
+
+async function onPasswordSubmitted(pw: PwResponse) {
+	waiting.value = true;
+	password.value = pw.password;
+
+	if (userInfo.value == null) {
+		await os.alert({
 			type: 'error',
+			title: i18n.ts.noSuchUser,
 			text: i18n.ts.signinFailed,
 		});
-		signing = false;
-	});
-}
-
-function onSubmit() {
-	signing = true;
-	if (!totpLogin && user && user.twoFactorEnabled) {
-		if (window.PublicKeyCredential && user.securityKeys) {
-			os.api('signin', {
-				username,
-				password,
-				'hcaptcha-response': hCaptchaResponse,
-				'g-recaptcha-response': reCaptchaResponse,
-			}).then(res => {
-				totpLogin = true;
-				signing = false;
-				challengeData = res;
-				return queryKey();
-			}).catch(loginFailed);
-		} else {
-			totpLogin = true;
-			signing = false;
-		}
+		waiting.value = false;
+		return;
 	} else {
-		os.api('signin', {
-			username,
-			password,
-			'hcaptcha-response': hCaptchaResponse,
-			'g-recaptcha-response': reCaptchaResponse,
-			token: user && user.twoFactorEnabled ? token : undefined,
-		}).then(res => {
-			emit('login', res);
-			onLogin(res);
-		}).catch(loginFailed);
+		await tryLogin({
+			username: userInfo.value.username,
+			password: pw.password,
+			'hcaptcha-response': pw.captcha.hCaptchaResponse,
+			'm-captcha-response': pw.captcha.mCaptchaResponse,
+			'g-recaptcha-response': pw.captcha.reCaptchaResponse,
+			'turnstile-response': pw.captcha.turnstileResponse,
+			'testcaptcha-response': pw.captcha.testcaptchaResponse,
+		});
 	}
 }
 
-function loginFailed(err) {
-	switch (err.id) {
+async function onTotpSubmitted(token: string) {
+	waiting.value = true;
+
+	if (userInfo.value == null) {
+		await os.alert({
+			type: 'error',
+			title: i18n.ts.noSuchUser,
+			text: i18n.ts.signinFailed,
+		});
+		waiting.value = false;
+		return;
+	} else {
+		await tryLogin({
+			username: userInfo.value.username,
+			password: password.value,
+			token,
+		});
+	}
+}
+
+async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promise<Misskey.entities.SigninFlowResponse> {
+	const _req = {
+		username: req.username ?? userInfo.value?.username,
+		...req,
+	};
+
+	function assertIsSigninFlowRequest(x: Partial<Misskey.entities.SigninFlowRequest>): x is Misskey.entities.SigninFlowRequest {
+		return x.username != null;
+	}
+
+	if (!assertIsSigninFlowRequest(_req)) {
+		throw new Error('Invalid request');
+	}
+
+	return await misskeyApi('signin-flow', _req).then(async (res) => {
+		if (res.finished) {
+			emit('login', res);
+			await onLoginSucceeded(res);
+		} else {
+			switch (res.next) {
+				case 'captcha': {
+					needCaptcha.value = true;
+					page.value = 'password';
+					break;
+				}
+				case 'password': {
+					needCaptcha.value = false;
+					page.value = 'password';
+					break;
+				}
+				case 'totp': {
+					page.value = 'totp';
+					break;
+				}
+				case 'passkey': {
+					if (webAuthnSupported()) {
+						credentialRequest.value = parseRequestOptionsFromJSON({
+							publicKey: res.authRequest,
+						});
+						page.value = 'passkey';
+					} else {
+						page.value = 'totp';
+					}
+					break;
+				}
+			}
+
+			if (doingPasskeyFromInputPage.value === true) {
+				doingPasskeyFromInputPage.value = false;
+				page.value = 'input';
+				password.value = '';
+			}
+			passwordPageEl.value?.resetCaptcha();
+			nextTick(() => {
+				waiting.value = false;
+			});
+		}
+		return res;
+	}).catch((err) => {
+		onSigninApiError(err);
+		return Promise.reject(err);
+	});
+}
+
+async function onLoginSucceeded(res: Misskey.entities.SigninFlowResponse & { finished: true }) {
+	if (props.autoSet) {
+		await login(res.i);
+	}
+}
+
+function onSigninApiError(err?: any): void {
+	const id = err?.id ?? null;
+
+	switch (id) {
 		case '6cc579cc-885d-43d8-95c2-b8c7fc963280': {
 			os.alert({
 				type: 'error',
@@ -215,8 +315,48 @@ function loginFailed(err) {
 			});
 			break;
 		}
+		case 'cdf1235b-ac71-46d4-a3a6-84ccce48df6f': {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.loginFailed,
+				text: i18n.ts.incorrectTotp,
+			});
+			break;
+		}
+		case '36b96a7d-b547-412d-aeed-2d611cdc8cdc': {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.loginFailed,
+				text: i18n.ts.unknownWebAuthnKey,
+			});
+			break;
+		}
+		case '93b86c4b-72f9-40eb-9815-798928603d1e': {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.loginFailed,
+				text: i18n.ts.passkeyVerificationFailed,
+			});
+			break;
+		}
+		case 'b18c89a7-5b5e-4cec-bb5b-0419f332d430': {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.loginFailed,
+				text: i18n.ts.passkeyVerificationFailed,
+			});
+			break;
+		}
+		case '2d84773e-f7b7-4d0b-8f72-bb69b584c912': {
+			os.alert({
+				type: 'error',
+				title: i18n.ts.loginFailed,
+				text: i18n.ts.passkeyVerificationSucceededButPasswordlessLoginDisabled,
+			});
+			break;
+		}
 		default: {
-			console.log(err);
+			console.error(err);
 			os.alert({
 				type: 'error',
 				title: i18n.ts.loginFailed,
@@ -225,29 +365,55 @@ function loginFailed(err) {
 		}
 	}
 
-	challengeData = null;
-	totpLogin = false;
-	signing = false;
+	if (doingPasskeyFromInputPage.value === true) {
+		doingPasskeyFromInputPage.value = false;
+		page.value = 'input';
+		password.value = '';
+	}
+	passwordPageEl.value?.resetCaptcha();
+	nextTick(() => {
+		waiting.value = false;
+	});
 }
 
-function resetPassword() {
-	os.popup(defineAsyncComponent(() => import('@/components/MkForgotPassword.vue')), {}, {
-	}, 'closed');
-}
+onBeforeUnmount(() => {
+	password.value = '';
+	needCaptcha.value = false;
+	userInfo.value = null;
+});
 </script>
 
-<style lang="scss" scoped>
-.eppvobhk {
-	> .auth {
-		> .avatar {
-			margin: 0 auto 0 auto;
-			width: 64px;
-			height: 64px;
-			background: #ddd;
-			background-position: center;
-			background-size: cover;
-			border-radius: 100%;
-		}
-	}
+<style lang="scss" module>
+.transition_enterActive,
+.transition_leaveActive {
+	transition: opacity 0.3s cubic-bezier(0,0,.35,1), transform 0.3s cubic-bezier(0,0,.35,1);
+}
+.transition_enterFrom {
+	opacity: 0;
+	transform: translateX(50px);
+}
+.transition_leaveTo {
+	opacity: 0;
+	transform: translateX(-50px);
+}
+
+.signinRoot {
+	overflow-x: hidden;
+	overflow-x: clip;
+
+	position: relative;
+}
+
+.waitingRoot {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: color-mix(in srgb, var(--MI_THEME-panel), transparent 50%);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1;
 }
 </style>

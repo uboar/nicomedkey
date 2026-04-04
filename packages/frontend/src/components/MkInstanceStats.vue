@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div :class="$style.root">
 	<MkFoldableSection class="item">
@@ -5,7 +10,7 @@
 		<div :class="$style.chart">
 			<div class="selects">
 				<MkSelect v-model="chartSrc" style="margin: 0; flex: 1;">
-					<optgroup :label="i18n.ts.federation">
+					<optgroup v-if="shouldShowFederation" :label="i18n.ts.federation">
 						<option value="federation">{{ i18n.ts._charts.federation }}</option>
 						<option value="ap-request">{{ i18n.ts._charts.apRequest }}</option>
 					</optgroup>
@@ -17,7 +22,7 @@
 					<optgroup :label="i18n.ts.notes">
 						<option value="notes">{{ i18n.ts._charts.notesIncDec }}</option>
 						<option value="local-notes">{{ i18n.ts._charts.localNotesIncDec }}</option>
-						<option value="remote-notes">{{ i18n.ts._charts.remoteNotesIncDec }}</option>
+						<option v-if="shouldShowFederation" value="remote-notes">{{ i18n.ts._charts.remoteNotesIncDec }}</option>
 						<option value="notes-total">{{ i18n.ts._charts.notesTotal }}</option>
 					</optgroup>
 					<optgroup :label="i18n.ts.drive">
@@ -41,23 +46,26 @@
 		<MkSelect v-model="heatmapSrc" style="margin: 0 0 12px 0;">
 			<option value="active-users">Active users</option>
 			<option value="notes">Notes</option>
-			<option value="ap-requests-inbox-received">AP Requests: inboxReceived</option>
-			<option value="ap-requests-deliver-succeeded">AP Requests: deliverSucceeded</option>
-			<option value="ap-requests-deliver-failed">AP Requests: deliverFailed</option>
+			<option v-if="shouldShowFederation" value="ap-requests-inbox-received">AP Requests: inboxReceived</option>
+			<option v-if="shouldShowFederation" value="ap-requests-deliver-succeeded">AP Requests: deliverSucceeded</option>
+			<option v-if="shouldShowFederation" value="ap-requests-deliver-failed">AP Requests: deliverFailed</option>
 		</MkSelect>
 		<div class="_panel" :class="$style.heatmap">
-			<MkHeatmap :src="heatmapSrc"/>
+			<MkHeatmap :src="heatmapSrc" :label="'Read & Write'"/>
 		</div>
 	</MkFoldableSection>
 
 	<MkFoldableSection class="item">
 		<template #header>Retention rate</template>
-		<div class="_panel" :class="$style.retention">
+		<div class="_panel" :class="$style.retentionHeatmap">
 			<MkRetentionHeatmap/>
+		</div>
+		<div class="_panel" :class="$style.retentionLine">
+			<MkRetentionLineChart/>
 		</div>
 	</MkFoldableSection>
 
-	<MkFoldableSection class="item">
+	<MkFoldableSection v-if="shouldShowFederation" class="item">
 		<template #header>Federation</template>
 		<div :class="$style.federation">
 			<div class="pies">
@@ -76,26 +84,33 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from 'vue';
+import { onMounted, ref, computed, useTemplateRef } from 'vue';
 import { Chart } from 'chart.js';
+import type { HeatmapSource } from '@/components/MkHeatmap.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkChart from '@/components/MkChart.vue';
-import { useChartTooltip } from '@/scripts/use-chart-tooltip';
-import * as os from '@/os';
-import { i18n } from '@/i18n';
+import { useChartTooltip } from '@/use/use-chart-tooltip.js';
+import { $i } from '@/i.js';
+import * as os from '@/os.js';
+import { misskeyApiGet } from '@/utility/misskey-api.js';
+import { instance } from '@/instance.js';
+import { i18n } from '@/i18n.js';
 import MkHeatmap from '@/components/MkHeatmap.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkRetentionHeatmap from '@/components/MkRetentionHeatmap.vue';
-import { initChart } from '@/scripts/init-chart';
+import MkRetentionLineChart from '@/components/MkRetentionLineChart.vue';
+import { initChart } from '@/utility/init-chart.js';
 
 initChart();
 
+const shouldShowFederation = computed(() => instance.federation !== 'none' || $i?.isModerator);
+
 const chartLimit = 500;
-let chartSpan = $ref<'hour' | 'day'>('hour');
-let chartSrc = $ref('active-users');
-let heatmapSrc = $ref('active-users');
-let subDoughnutEl = $shallowRef<HTMLCanvasElement>();
-let pubDoughnutEl = $shallowRef<HTMLCanvasElement>();
+const chartSpan = ref<'hour' | 'day'>('hour');
+const chartSrc = ref('active-users');
+const heatmapSrc = ref<HeatmapSource>('active-users');
+const subDoughnutEl = useTemplateRef('subDoughnutEl');
+const pubDoughnutEl = useTemplateRef('pubDoughnutEl');
 
 const { handler: externalTooltipHandler1 } = useChartTooltip({
 	position: 'middle',
@@ -111,7 +126,7 @@ function createDoughnut(chartEl, tooltip, data) {
 			labels: data.map(x => x.name),
 			datasets: [{
 				backgroundColor: data.map(x => x.color),
-				borderColor: getComputedStyle(document.documentElement).getPropertyValue('--panel'),
+				borderColor: getComputedStyle(window.document.documentElement).getPropertyValue('--MI_THEME-panel'),
 				borderWidth: 2,
 				hoverOffset: 0,
 				data: data.map(x => x.value),
@@ -128,7 +143,8 @@ function createDoughnut(chartEl, tooltip, data) {
 				},
 			},
 			onClick: (ev) => {
-				const hit = chartInstance.getElementsAtEventForMode(ev, 'nearest', { intersect: true }, false)[0];
+				if (ev.native == null) return;
+				const hit = chartInstance.getElementsAtEventForMode(ev.native, 'nearest', { intersect: true }, false)[0];
 				if (hit && data[hit.index].onClick) {
 					data[hit.index].onClick();
 				}
@@ -153,24 +169,47 @@ function createDoughnut(chartEl, tooltip, data) {
 }
 
 onMounted(() => {
-	os.apiGet('federation/stats', { limit: 30 }).then(fedStats => {
-		createDoughnut(subDoughnutEl, externalTooltipHandler1, fedStats.topSubInstances.map(x => ({
+	misskeyApiGet('federation/stats', { limit: 30 }).then(fedStats => {
+		type ChartData = {
+			name: string,
+			color: string | null,
+			value: number,
+			onClick?: () => void,
+		}[];
+
+		const subs: ChartData = fedStats.topSubInstances.map(x => ({
 			name: x.host,
 			color: x.themeColor,
 			value: x.followersCount,
 			onClick: () => {
 				os.pageWindow(`/instance-info/${x.host}`);
 			},
-		})).concat([{ name: '(other)', color: '#80808080', value: fedStats.otherFollowersCount }]));
+		}));
 
-		createDoughnut(pubDoughnutEl, externalTooltipHandler2, fedStats.topPubInstances.map(x => ({
+		subs.push({
+			name: '(other)',
+			color: '#80808080',
+			value: fedStats.otherFollowersCount,
+		});
+
+		createDoughnut(subDoughnutEl.value, externalTooltipHandler1, subs);
+
+		const pubs: ChartData = fedStats.topPubInstances.map(x => ({
 			name: x.host,
 			color: x.themeColor,
 			value: x.followingCount,
 			onClick: () => {
 				os.pageWindow(`/instance-info/${x.host}`);
 			},
-		})).concat([{ name: '(other)', color: '#80808080', value: fedStats.otherFollowingCount }]));
+		}));
+
+		pubs.push({
+			name: '(other)',
+			color: '#80808080',
+			value: fedStats.otherFollowingCount,
+		});
+
+		createDoughnut(pubDoughnutEl.value, externalTooltipHandler2, pubs);
 	});
 });
 </script>
@@ -202,7 +241,12 @@ onMounted(() => {
 	margin-bottom: 16px;
 }
 
-.retention {
+.retentionHeatmap {
+	padding: 16px;
+	margin-bottom: 16px;
+}
+
+.retentionLine {
 	padding: 16px;
 	margin-bottom: 16px;
 }
@@ -217,8 +261,8 @@ onMounted(() => {
 				flex: 1;
 				min-width: 0;
 				position: relative;
-				background: var(--panel);
-				border-radius: var(--radius);
+				background: var(--MI_THEME-panel);
+				border-radius: var(--MI-radius);
 				padding: 24px;
 				max-height: 300px;
 

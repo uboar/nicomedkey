@@ -1,22 +1,32 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <canvas ref="chartEl"></canvas>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { onMounted, useTemplateRef } from 'vue';
 import { Chart } from 'chart.js';
-import number from '@/filters/number';
-import { defaultStore } from '@/store';
-import { useChartTooltip } from '@/scripts/use-chart-tooltip';
-import { initChart } from '@/scripts/init-chart';
+import { useChartTooltip } from '@/use/use-chart-tooltip.js';
+import { initChart } from '@/utility/init-chart.js';
+
+export type InstanceForPie = {
+	name: string,
+	color: string | null,
+	value: number,
+	onClick?: () => void
+};
 
 initChart();
 
 const props = defineProps<{
-	data: { name: string; value: number; color: string; onClick?: () => void }[];
+	data: InstanceForPie[];
 }>();
 
-const chartEl = shallowRef<HTMLCanvasElement>(null);
+const chartEl = useTemplateRef('chartEl');
 
 const { handler: externalTooltipHandler } = useChartTooltip({
 	position: 'middle',
@@ -31,7 +41,7 @@ onMounted(() => {
 			labels: props.data.map(x => x.name),
 			datasets: [{
 				backgroundColor: props.data.map(x => x.color),
-				borderColor: getComputedStyle(document.documentElement).getPropertyValue('--panel'),
+				borderColor: getComputedStyle(window.document.documentElement).getPropertyValue('--MI_THEME-panel'),
 				borderWidth: 2,
 				hoverOffset: 0,
 				data: props.data.map(x => x.value),
@@ -69,7 +79,3 @@ onMounted(() => {
 	});
 });
 </script>
-
-<style lang="scss" scoped>
-
-</style>

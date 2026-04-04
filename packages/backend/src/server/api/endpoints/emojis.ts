@@ -1,9 +1,13 @@
-import { IsNull, MoreThan } from 'typeorm';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { IsNull } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { EmojisRepository } from '@/models/index.js';
+import type { EmojisRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { EmojiEntityService } from '@/core/entities/EmojiEntityService.js';
-import type { Config } from '@/config.js';
 import { DI } from '@/di-symbols.js';
 
 export const meta = {
@@ -23,24 +27,7 @@ export const meta = {
 				items: {
 					type: 'object',
 					optional: false, nullable: false,
-					properties: {
-						name: {
-							type: 'string',
-							optional: false, nullable: false,
-						},
-						aliases: {
-							type: 'array',
-							optional: false, nullable: false,
-							items: {
-								type: 'string',
-								optional: false, nullable: false,
-							},
-						},
-						category: {
-							type: 'string',
-							optional: false, nullable: true,
-						},
-					},
+					ref: 'EmojiSimple',
 				},
 			},
 		},
@@ -54,13 +41,9 @@ export const paramDef = {
 	required: [],
 } as const;
 
-// eslint-disable-next-line import/no-default-export
 @Injectable()
-export default class extends Endpoint<typeof meta, typeof paramDef> {
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
-	
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
 
@@ -75,18 +58,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 					category: 'ASC',
 					name: 'ASC',
 				},
-				cache: {
-					id: 'meta_emojis',
-					milliseconds: 3600000,	// 1 hour
-				},
 			});
 
 			return {
-				emojis: await this.emojiEntityService.packMany(emojis, {
-					omitId: true,
-					omitHost: true,
-					withUrl: true,
-				}),
+				emojis: await this.emojiEntityService.packSimpleMany(emojis),
 			};
 		});
 	}

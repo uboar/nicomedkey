@@ -1,64 +1,50 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { Inject, Injectable } from '@nestjs/common';
-import { IsNull } from 'typeorm';
-import type { ILocalUser, User } from '@/models/entities/User.js';
-import type { RelaysRepository, UsersRepository } from '@/models/index.js';
+import type { MiUser } from '@/models/User.js';
+import type { RelaysRepository } from '@/models/_.js';
 import { IdService } from '@/core/IdService.js';
-import { Cache } from '@/misc/cache.js';
-import type { Relay } from '@/models/entities/Relay.js';
+import { MemorySingleCache } from '@/misc/cache.js';
+import type { MiRelay } from '@/models/Relay.js';
 import { QueueService } from '@/core/QueueService.js';
-import { CreateSystemUserService } from '@/core/CreateSystemUserService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { DI } from '@/di-symbols.js';
 import { deepClone } from '@/misc/clone.js';
 import { bindThis } from '@/decorators.js';
-
-const ACTOR_USERNAME = 'relay.actor' as const;
+import { SystemAccountService } from '@/core/SystemAccountService.js';
 
 @Injectable()
 export class RelayService {
-	private relaysCache: Cache<Relay[]>;
+	private relaysCache: MemorySingleCache<MiRelay[]>;
 
 	constructor(
-		@Inject(DI.usersRepository)
-		private usersRepository: UsersRepository,
-
 		@Inject(DI.relaysRepository)
 		private relaysRepository: RelaysRepository,
 
 		private idService: IdService,
 		private queueService: QueueService,
-		private createSystemUserService: CreateSystemUserService,
+		private systemAccountService: SystemAccountService,
 		private apRendererService: ApRendererService,
 	) {
-		this.relaysCache = new Cache<Relay[]>(1000 * 60 * 10);
+		this.relaysCache = new MemorySingleCache<MiRelay[]>(1000 * 60 * 10); // 10m
 	}
 
 	@bindThis
-	private async getRelayActor(): Promise<ILocalUser> {
-		const user = await this.usersRepository.findOneBy({
-			host: IsNull(),
-			username: ACTOR_USERNAME,
-		});
-	
-		if (user) return user as ILocalUser;
-	
-		const created = await this.createSystemUserService.createSystemUser(ACTOR_USERNAME);
-		return created as ILocalUser;
-	}
-
-	@bindThis
-	public async addRelay(inbox: string): Promise<Relay> {
-		const relay = await this.relaysRepository.insert({
-			id: this.idService.genId(),
+	public async addRelay(inbox: string): Promise<MiRelay> {
+		const relay = await this.relaysRepository.insertOne({
+			id: this.idService.gen(),
 			inbox,
 			status: 'requesting',
-		}).then(x => this.relaysRepository.findOneByOrFail(x.identifiers[0]));
-	
-		const relayActor = await this.getRelayActor();
-		const follow = await this.apRendererService.renderFollowRelay(relay, relayActor);
-		const activity = this.apRendererService.renderActivity(follow);
-		this.queueService.deliver(relayActor, activity, relay.inbox);
-	
+		});
+
+		const relayActor = await this.systemAccountService.fetch('relay');
+		const follow = this.apRendererService.renderFollowRelay(relay, relayActor);
+		const activity = this.apRendererService.addContext(follow);
+		this.queueService.deliver(relayActor, activity, relay.inbox, false);
+
 		return relay;
 	}
 
@@ -67,32 +53,32 @@ export class RelayService {
 		const relay = await this.relaysRepository.findOneBy({
 			inbox,
 		});
-	
+
 		if (relay == null) {
 			throw new Error('relay not found');
 		}
-	
-		const relayActor = await this.getRelayActor();
+
+		const relayActor = await this.systemAccountService.fetch('relay');
 		const follow = this.apRendererService.renderFollowRelay(relay, relayActor);
 		const undo = this.apRendererService.renderUndo(follow, relayActor);
-		const activity = this.apRendererService.renderActivity(undo);
-		this.queueService.deliver(relayActor, activity, relay.inbox);
-	
+		const activity = this.apRendererService.addContext(undo);
+		this.queueService.deliver(relayActor, activity, relay.inbox, false);
+
 		await this.relaysRepository.delete(relay.id);
 	}
 
 	@bindThis
-	public async listRelay(): Promise<Relay[]> {
+	public async listRelay(): Promise<MiRelay[]> {
 		const relays = await this.relaysRepository.find();
 		return relays;
 	}
-	
+
 	@bindThis
 	public async relayAccepted(id: string): Promise<string> {
 		const result = await this.relaysRepository.update(id, {
 			status: 'accepted',
 		});
-	
+
 		return JSON.stringify(result);
 	}
 
@@ -101,26 +87,26 @@ export class RelayService {
 		const result = await this.relaysRepository.update(id, {
 			status: 'rejected',
 		});
-	
+
 		return JSON.stringify(result);
 	}
 
 	@bindThis
-	public async deliverToRelays(user: { id: User['id']; host: null; }, activity: any): Promise<void> {
+	public async deliverToRelays(user: { id: MiUser['id']; host: null; }, activity: any): Promise<void> {
 		if (activity == null) return;
-	
-		const relays = await this.relaysCache.fetch(null, () => this.relaysRepository.findBy({
+
+		const relays = await this.relaysCache.fetch(() => this.relaysRepository.findBy({
 			status: 'accepted',
 		}));
 		if (relays.length === 0) return;
-	
+
 		const copy = deepClone(activity);
 		if (!copy.to) copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
-	
+
 		const signed = await this.apRendererService.attachLdSignature(copy, user);
-	
+
 		for (const relay of relays) {
-			this.queueService.deliver(user, signed, relay.inbox);
+			this.queueService.deliver(user, signed, relay.inbox, false);
 		}
 	}
 }

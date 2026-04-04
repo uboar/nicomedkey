@@ -1,104 +1,128 @@
-<template>
-<MkPagination ref="pagingComponent" :pagination="pagination">
-	<template #empty>
-		<div class="_fullinfo">
-			<img src="https://xn--931a.moe/assets/info.jpg" class="_ghost"/>
-			<div>{{ i18n.ts.noNotifications }}</div>
-		</div>
-	</template>
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
 
-	<template #default="{ items: notifications }">
-		<MkDateSeparatedList v-slot="{ item: notification }" :class="$style.list" :items="notifications" :no-gap="true">
-			<XNote v-if="['reply', 'quote', 'mention'].includes(notification.type)" :key="notification.id" :note="notification.note"/>
-			<XNotification v-else :key="notification.id" :notification="notification" :with-time="true" :full="true" class="_panel notification"/>
-		</MkDateSeparatedList>
-	</template>
-</MkPagination>
+<template>
+<MkPullToRefresh :refresher="() => reload()">
+	<MkPagination ref="pagingComponent" :pagination="pagination">
+		<template #empty>
+			<div class="_fullinfo">
+				<img :src="infoImageUrl" draggable="false"/>
+				<div>{{ i18n.ts.noNotifications }}</div>
+			</div>
+		</template>
+
+		<template #default="{ items: notifications }">
+			<component
+				:is="prefer.s.animation ? TransitionGroup : 'div'" :class="[$style.notifications]"
+				:enterActiveClass="$style.transition_x_enterActive"
+				:leaveActiveClass="$style.transition_x_leaveActive"
+				:enterFromClass="$style.transition_x_enterFrom"
+				:leaveToClass="$style.transition_x_leaveTo"
+				:moveClass=" $style.transition_x_move"
+				tag="div"
+			>
+				<template v-for="(notification, i) in notifications" :key="notification.id">
+					<MkNote v-if="['reply', 'quote', 'mention'].includes(notification.type)" :class="$style.item" :note="notification.note" :withHardMute="true"/>
+					<XNotification v-else :class="$style.item" :notification="notification" :withTime="true" :full="true"/>
+				</template>
+			</component>
+		</template>
+	</MkPagination>
+</MkPullToRefresh>
 </template>
 
 <script lang="ts" setup>
-import { defineComponent, markRaw, onUnmounted, onMounted, computed, shallowRef } from 'vue';
-import { notificationTypes } from 'misskey-js';
-import MkPagination, { Paging } from '@/components/MkPagination.vue';
+import { onUnmounted, onMounted, computed, useTemplateRef, TransitionGroup } from 'vue';
+import * as Misskey from 'misskey-js';
+import type { notificationTypes } from '@@/js/const.js';
+import MkPagination from '@/components/MkPagination.vue';
 import XNotification from '@/components/MkNotification.vue';
-import MkDateSeparatedList from '@/components/MkDateSeparatedList.vue';
-import XNote from '@/components/MkNote.vue';
-import * as os from '@/os';
-import { stream } from '@/stream';
-import { $i } from '@/account';
-import { i18n } from '@/i18n';
+import MkNote from '@/components/MkNote.vue';
+import { useStream } from '@/stream.js';
+import { i18n } from '@/i18n.js';
+import { infoImageUrl } from '@/instance.js';
+import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
+import { prefer } from '@/preferences.js';
 
 const props = defineProps<{
-	includeTypes?: typeof notificationTypes[number][];
-	unreadOnly?: boolean;
+	excludeTypes?: typeof notificationTypes[number][];
 }>();
 
-const pagingComponent = shallowRef<InstanceType<typeof MkPagination>>();
+const pagingComponent = useTemplateRef('pagingComponent');
 
-const pagination: Paging = {
-	endpoint: 'i/notifications' as const,
-	limit: 10,
+const pagination = computed(() => prefer.r.useGroupedNotifications.value ? {
+	endpoint: 'i/notifications-grouped' as const,
+	limit: 20,
 	params: computed(() => ({
-		includeTypes: props.includeTypes ?? undefined,
-		excludeTypes: props.includeTypes ? undefined : $i.mutingNotificationTypes,
-		unreadOnly: props.unreadOnly,
+		excludeTypes: props.excludeTypes ?? undefined,
 	})),
-};
+} : {
+	endpoint: 'i/notifications' as const,
+	limit: 20,
+	params: computed(() => ({
+		excludeTypes: props.excludeTypes ?? undefined,
+	})),
+});
 
-const onNotification = (notification) => {
-	const isMuted = props.includeTypes ? !props.includeTypes.includes(notification.type) : $i.mutingNotificationTypes.includes(notification.type);
-	if (isMuted || document.visibilityState === 'visible') {
-		stream.send('readNotification', {
-			id: notification.id,
-		});
+function onNotification(notification) {
+	const isMuted = props.excludeTypes ? props.excludeTypes.includes(notification.type) : false;
+	if (isMuted || window.document.visibilityState === 'visible') {
+		useStream().send('readNotification');
 	}
 
 	if (!isMuted) {
-		pagingComponent.value.prepend({
-			...notification,
-			isRead: document.visibilityState === 'visible',
-		});
+		pagingComponent.value?.prepend(notification);
 	}
-};
+}
 
-let connection;
+function reload() {
+	return new Promise<void>((res) => {
+		pagingComponent.value?.reload().then(() => {
+			res();
+		});
+	});
+}
+
+let connection: Misskey.ChannelConnection<Misskey.Channels['main']>;
 
 onMounted(() => {
-	connection = stream.useChannel('main');
+	connection = useStream().useChannel('main');
 	connection.on('notification', onNotification);
-	connection.on('readAllNotifications', () => {
-		if (pagingComponent.value) {
-			for (const item of pagingComponent.value.queue) {
-				item.isRead = true;
-			}
-			for (const item of pagingComponent.value.items) {
-				item.isRead = true;
-			}
-		}
-	});
-	connection.on('readNotifications', notificationIds => {
-		if (pagingComponent.value) {
-			for (let i = 0; i < pagingComponent.value.queue.length; i++) {
-				if (notificationIds.includes(pagingComponent.value.queue[i].id)) {
-					pagingComponent.value.queue[i].isRead = true;
-				}
-			}
-			for (let i = 0; i < (pagingComponent.value.items || []).length; i++) {
-				if (notificationIds.includes(pagingComponent.value.items[i].id)) {
-					pagingComponent.value.items[i].isRead = true;
-				}
-			}
-		}
-	});
+	connection.on('notificationFlushed', reload);
 });
 
 onUnmounted(() => {
 	if (connection) connection.dispose();
 });
+
+defineExpose({
+	reload,
+});
 </script>
 
 <style lang="scss" module>
-.list {
-	background: var(--panel);
+.transition_x_move,
+.transition_x_enterActive,
+.transition_x_leaveActive {
+	transition: opacity 0.3s cubic-bezier(0,.5,.5,1), transform 0.3s cubic-bezier(0,.5,.5,1) !important;
+}
+.transition_x_enterFrom,
+.transition_x_leaveTo {
+	opacity: 0;
+	transform: translateY(-50%);
+}
+.transition_x_leaveActive {
+	position: absolute;
+}
+
+.notifications {
+	container-type: inline-size;
+	background: var(--MI_THEME-panel);
+}
+
+.item {
+	border-bottom: solid 0.5px var(--MI_THEME-divider);
 }
 </style>

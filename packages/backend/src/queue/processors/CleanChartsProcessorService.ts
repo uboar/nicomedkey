@@ -1,7 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { In, MoreThan } from 'typeorm';
-import { DI } from '@/di-symbols.js';
-import type { Config } from '@/config.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
 import type Logger from '@/logger.js';
 import FederationChart from '@/core/chart/charts/federation.js';
 import NotesChart from '@/core/chart/charts/notes.js';
@@ -17,16 +19,13 @@ import PerUserDriveChart from '@/core/chart/charts/per-user-drive.js';
 import ApRequestChart from '@/core/chart/charts/ap-request.js';
 import { bindThis } from '@/decorators.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
-import type Bull from 'bull';
+import type * as Bull from 'bullmq';
 
 @Injectable()
 export class CleanChartsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
 		private federationChart: FederationChart,
 		private notesChart: NotesChart,
 		private usersChart: UsersChart,
@@ -46,25 +45,23 @@ export class CleanChartsProcessorService {
 	}
 
 	@bindThis
-	public async process(job: Bull.Job<Record<string, unknown>>, done: () => void): Promise<void> {
+	public async process(): Promise<void> {
 		this.logger.info('Clean charts...');
 
-		await Promise.all([
-			this.federationChart.clean(),
-			this.notesChart.clean(),
-			this.usersChart.clean(),
-			this.activeUsersChart.clean(),
-			this.instanceChart.clean(),
-			this.perUserNotesChart.clean(),
-			this.perUserPvChart.clean(),
-			this.driveChart.clean(),
-			this.perUserReactionsChart.clean(),
-			this.perUserFollowingChart.clean(),
-			this.perUserDriveChart.clean(),
-			this.apRequestChart.clean(),
-		]);
+		// DBへの同時接続を避けるためにPromise.allを使わずひとつずつ実行する
+		await this.federationChart.clean();
+		await this.notesChart.clean();
+		await this.usersChart.clean();
+		await this.activeUsersChart.clean();
+		await this.instanceChart.clean();
+		await this.perUserNotesChart.clean();
+		await this.perUserPvChart.clean();
+		await this.driveChart.clean();
+		await this.perUserReactionsChart.clean();
+		await this.perUserFollowingChart.clean();
+		await this.perUserDriveChart.clean();
+		await this.apRequestChart.clean();
 
 		this.logger.succ('All charts successfully cleaned.');
-		done();
 	}
 }

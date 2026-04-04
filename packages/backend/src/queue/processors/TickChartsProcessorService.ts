@@ -1,7 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { In, MoreThan } from 'typeorm';
-import { DI } from '@/di-symbols.js';
-import type { Config } from '@/config.js';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Injectable } from '@nestjs/common';
 import type Logger from '@/logger.js';
 import FederationChart from '@/core/chart/charts/federation.js';
 import NotesChart from '@/core/chart/charts/notes.js';
@@ -17,16 +19,13 @@ import PerUserDriveChart from '@/core/chart/charts/per-user-drive.js';
 import ApRequestChart from '@/core/chart/charts/ap-request.js';
 import { bindThis } from '@/decorators.js';
 import { QueueLoggerService } from '../QueueLoggerService.js';
-import type Bull from 'bull';
+import type * as Bull from 'bullmq';
 
 @Injectable()
 export class TickChartsProcessorService {
 	private logger: Logger;
 
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
-
 		private federationChart: FederationChart,
 		private notesChart: NotesChart,
 		private usersChart: UsersChart,
@@ -46,25 +45,23 @@ export class TickChartsProcessorService {
 	}
 
 	@bindThis
-	public async process(job: Bull.Job<Record<string, unknown>>, done: () => void): Promise<void> {
+	public async process(): Promise<void> {
 		this.logger.info('Tick charts...');
 
-		await Promise.all([
-			this.federationChart.tick(false),
-			this.notesChart.tick(false),
-			this.usersChart.tick(false),
-			this.activeUsersChart.tick(false),
-			this.instanceChart.tick(false),
-			this.perUserNotesChart.tick(false),
-			this.perUserPvChart.tick(false),
-			this.driveChart.tick(false),
-			this.perUserReactionsChart.tick(false),
-			this.perUserFollowingChart.tick(false),
-			this.perUserDriveChart.tick(false),
-			this.apRequestChart.tick(false),
-		]);
+		// DBへの同時接続を避けるためにPromise.allを使わずひとつずつ実行する
+		await this.federationChart.tick(false);
+		await this.notesChart.tick(false);
+		await this.usersChart.tick(false);
+		await this.activeUsersChart.tick(false);
+		await this.instanceChart.tick(false);
+		await this.perUserNotesChart.tick(false);
+		await this.perUserPvChart.tick(false);
+		await this.driveChart.tick(false);
+		await this.perUserReactionsChart.tick(false);
+		await this.perUserFollowingChart.tick(false);
+		await this.perUserDriveChart.tick(false);
+		await this.apRequestChart.tick(false);
 
 		this.logger.succ('All charts successfully ticked.');
-		done();
 	}
 }

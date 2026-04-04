@@ -1,32 +1,37 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkStickyContainer>
-	<template #header><MkPageHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs"/></template>
-	<MkSpacer :content-max="800">
-		<div v-if="tab === 'all' || tab === 'unread'">
-			<XNotifications class="notifications" :include-types="includeTypes" :unread-only="unreadOnly"/>
+<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs">
+	<MkSpacer :contentMax="800">
+		<div v-if="tab === 'all'">
+			<XNotifications :class="$style.notifications" :excludeTypes="excludeTypes"/>
 		</div>
 		<div v-else-if="tab === 'mentions'">
-			<XNotes :pagination="mentionsPagination"/>
+			<MkNotes :pagination="mentionsPagination"/>
 		</div>
 		<div v-else-if="tab === 'directNotes'">
-			<XNotes :pagination="directNotesPagination"/>
+			<MkNotes :pagination="directNotesPagination"/>
 		</div>
 	</MkSpacer>
-</MkStickyContainer>
+</PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { notificationTypes } from 'misskey-js';
+import { computed, ref } from 'vue';
+import { notificationTypes } from '@@/js/const.js';
 import XNotifications from '@/components/MkNotifications.vue';
-import XNotes from '@/components/MkNotes.vue';
-import * as os from '@/os';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import MkNotes from '@/components/MkNotes.vue';
+import MkHorizontalSwipe from '@/components/MkHorizontalSwipe.vue';
+import * as os from '@/os.js';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
 
-let tab = $ref('all');
-let includeTypes = $ref<string[] | null>(null);
-let unreadOnly = $computed(() => tab === 'unread');
+const tab = ref('all');
+const includeTypes = ref<string[] | null>(null);
+const excludeTypes = computed(() => includeTypes.value ? notificationTypes.filter(t => !includeTypes.value.includes(t)) : null);
 
 const mentionsPagination = {
 	endpoint: 'notes/mentions' as const,
@@ -43,28 +48,28 @@ const directNotesPagination = {
 
 function setFilter(ev) {
 	const typeItems = notificationTypes.map(t => ({
-		text: i18n.t(`_notification._types.${t}`),
-		active: includeTypes && includeTypes.includes(t),
+		text: i18n.ts._notification._types[t],
+		active: (includeTypes.value && includeTypes.value.includes(t)) ?? false,
 		action: () => {
-			includeTypes = [t];
+			includeTypes.value = [t];
 		},
 	}));
-	const items = includeTypes != null ? [{
+	const items = includeTypes.value != null ? [{
 		icon: 'ti ti-x',
 		text: i18n.ts.clear,
 		action: () => {
-			includeTypes = null;
+			includeTypes.value = null;
 		},
-	}, null, ...typeItems] : typeItems;
+	}, { type: 'divider' as const }, ...typeItems] : typeItems;
 	os.popupMenu(items, ev.currentTarget ?? ev.target);
 }
 
-const headerActions = $computed(() => [tab === 'all' ? {
+const headerActions = computed(() => [tab.value === 'all' ? {
 	text: i18n.ts.filter,
 	icon: 'ti ti-filter',
-	highlighted: includeTypes != null,
+	highlighted: includeTypes.value != null,
 	handler: setFilter,
-} : undefined, tab === 'all' ? {
+} : undefined, tab.value === 'all' ? {
 	text: i18n.ts.markAllAsRead,
 	icon: 'ti ti-check',
 	handler: () => {
@@ -72,12 +77,10 @@ const headerActions = $computed(() => [tab === 'all' ? {
 	},
 } : undefined].filter(x => x !== undefined));
 
-const headerTabs = $computed(() => [{
+const headerTabs = computed(() => [{
 	key: 'all',
 	title: i18n.ts.all,
-}, {
-	key: 'unread',
-	title: i18n.ts.unread,
+	icon: 'ti ti-point',
 }, {
 	key: 'mentions',
 	title: i18n.ts.mentions,
@@ -88,8 +91,15 @@ const headerTabs = $computed(() => [{
 	icon: 'ti ti-mail',
 }]);
 
-definePageMetadata(computed(() => ({
+definePage(() => ({
 	title: i18n.ts.notifications,
 	icon: 'ti ti-bell',
-})));
+}));
 </script>
+
+<style module lang="scss">
+.notifications {
+	border-radius: var(--MI-radius);
+	overflow: clip;
+}
+</style>

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div :class="[$style.root, { [$style.rootMin]: forceSpacerMin }]">
 	<div :class="$style.content">
@@ -7,8 +12,9 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, onMounted, onUnmounted, ref } from 'vue';
-import { deviceKind } from '@/scripts/device-kind';
+import { inject } from 'vue';
+import { deviceKind } from '@/utility/device-kind.js';
+import { DI } from '@/di.js';
 
 const props = withDefaults(defineProps<{
 	contentMax?: number | null;
@@ -20,7 +26,7 @@ const props = withDefaults(defineProps<{
 	marginMax: 24,
 });
 
-const forceSpacerMin = inject('forceSpacerMin', false) || deviceKind === 'smartphone';
+const forceSpacerMin = inject(DI.forceSpacerMin, false) || deviceKind === 'smartphone';
 </script>
 
 <style lang="scss" module>

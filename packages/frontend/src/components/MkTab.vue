@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <script lang="ts">
 import { defineComponent, h, resolveDirective, withDirectives } from 'vue';
 
@@ -7,19 +12,19 @@ export default defineComponent({
 			required: true,
 		},
 	},
-	render() {
-		const options = this.$slots.default();
+	setup(props, { emit, slots }) {
+		const options = slots.default?.() ?? [];
 
-		return h('div', {
+		return () => h('div', {
 			class: 'pxhvhrfw',
 		}, options.map(option => withDirectives(h('button', {
-			class: ['_button', { active: this.modelValue === option.props.value }],
-			key: option.key,
-			disabled: this.modelValue === option.props.value,
+			class: ['_button', { active: props.modelValue === option.props?.value }],
+			key: option.key as string,
+			disabled: props.modelValue === option.props?.value,
 			onClick: () => {
-				this.$emit('update:modelValue', option.props.value);
+				emit('update:modelValue', option.props?.value);
 			},
-		}, option.children), [
+		}, option.children ?? []), [
 			[resolveDirective('click-anime')],
 		])));
 	},
@@ -34,7 +39,7 @@ export default defineComponent({
 	> button {
 		flex: 1;
 		padding: 10px 8px;
-		border-radius: var(--radius);
+		border-radius: 999px;
 
 		&:disabled {
 			opacity: 1 !important;
@@ -42,13 +47,13 @@ export default defineComponent({
 		}
 
 		&.active {
-			color: var(--accent);
-			background: var(--accentedBg);
+			color: var(--MI_THEME-accent);
+			background: var(--MI_THEME-accentedBg);
 		}
 
 		&:not(.active):hover {
-			color: var(--fgHighlighted);
-			background: var(--panelHighlight);
+			color: var(--MI_THEME-fgHighlighted);
+			background: var(--MI_THEME-panelHighlight);
 		}
 
 		&:not(:first-child) {

@@ -1,39 +1,44 @@
-<template>
-<XColumn :column="column" :is-stacked="isStacked" :menu="menu" @parent-focus="$event => emit('parent-focus', $event)">
-	<template #header><i class="ti ti-bell" style="margin-right: 8px;"></i>{{ column.name }}</template>
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
 
-	<XNotifications :include-types="column.includingTypes"/>
+<template>
+<XColumn :column="column" :isStacked="isStacked" :menu="menu" :refresher="async () => { await notificationsComponent?.reload() }">
+	<template #header><i class="ti ti-bell" style="margin-right: 8px;"></i>{{ column.name || i18n.ts._deck._columns.notifications }}</template>
+
+	<XNotifications ref="notificationsComponent" :excludeTypes="props.column.excludeTypes"/>
 </XColumn>
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent } from 'vue';
+import { defineAsyncComponent, useTemplateRef } from 'vue';
 import XColumn from './column.vue';
-import { updateColumn, Column } from './deck-store';
+import type { Column } from '@/deck.js';
+import { updateColumn } from '@/deck.js';
 import XNotifications from '@/components/MkNotifications.vue';
-import * as os from '@/os';
-import { i18n } from '@/i18n';
+import * as os from '@/os.js';
+import { i18n } from '@/i18n.js';
 
 const props = defineProps<{
 	column: Column;
 	isStacked: boolean;
 }>();
 
-const emit = defineEmits<{
-	(ev: 'parent-focus', direction: 'up' | 'down' | 'left' | 'right'): void;
-}>();
+const notificationsComponent = useTemplateRef('notificationsComponent');
 
 function func() {
-	os.popup(defineAsyncComponent(() => import('@/components/MkNotificationSettingWindow.vue')), {
-		includingTypes: props.column.includingTypes,
+	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkNotificationSelectWindow.vue')), {
+		excludeTypes: props.column.excludeTypes,
 	}, {
 		done: async (res) => {
-			const { includingTypes } = res;
+			const { excludeTypes } = res;
 			updateColumn(props.column.id, {
-				includingTypes: includingTypes,
+				excludeTypes: excludeTypes,
 			});
 		},
-	}, 'closed');
+		closed: () => dispose(),
+	});
 }
 
 const menu = [{

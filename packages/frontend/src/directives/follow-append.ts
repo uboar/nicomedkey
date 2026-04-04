@@ -1,5 +1,10 @@
-import { Directive } from 'vue';
-import { getScrollContainer, getScrollPosition } from '@/scripts/scroll';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { Directive } from 'vue';
+import { getScrollContainer, getScrollPosition } from '@@/js/scroll.js';
 
 export default {
 	mounted(src, binding, vn) {

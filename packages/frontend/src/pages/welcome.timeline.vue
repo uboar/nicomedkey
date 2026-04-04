@@ -1,99 +1,102 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div class="civpbkhh">
-	<div ref="scroll" class="scrollbox" v-bind:class="{ scroll: isScrolling }">
-		<div v-for="note in notes" class="note">
-			<div class="content _panel">
-				<div class="body">
-					<MkA v-if="note.replyId" class="reply" :to="`/notes/${note.replyId}`"><i class="ti ti-arrow-back-up"></i></MkA>
-					<Mfm v-if="note.text" :text="note.text" :author="note.user" :i="$i"/>
-					<MkA v-if="note.renoteId" class="rp" :to="`/notes/${note.renoteId}`">RN: ...</MkA>
-				</div>
-				<div v-if="note.files.length > 0" class="richcontent">
-					<MkMediaList :media-list="note.files"/>
-				</div>
-				<div v-if="note.poll">
-					<MkPoll :note="note" :readOnly="true"/>
-				</div>
-			</div>
-			<MkReactionsViewer ref="reactionsViewer" :note="note"/>
-		</div>
+<div :class="$style.root" class="_gaps">
+	<div
+		ref="notesMainContainerEl"
+		class="_gaps"
+		:class="[$style.scrollBoxMain, { [$style.scrollIntro]: (scrollState === 'intro'), [$style.scrollLoop]: (scrollState === 'loop') }]"
+		@animationend="changeScrollState"
+	>
+		<XNote v-for="note in notes" :key="`${note.id}_1`" :class="$style.note" :note="note"/>
+	</div>
+	<div v-if="isScrolling" class="_gaps" :class="[$style.scrollBoxSub, { [$style.scrollIntro]: (scrollState === 'intro'), [$style.scrollLoop]: (scrollState === 'loop') }]">
+		<XNote v-for="note in notes" :key="`${note.id}_2`" :class="$style.note" :note="note"/>
 	</div>
 </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
-import MkReactionsViewer from '@/components/MkReactionsViewer.vue';
-import MkMediaList from '@/components/MkMediaList.vue';
-import MkPoll from '@/components/MkPoll.vue';
-import * as os from '@/os';
+<script lang="ts" setup>
+import * as Misskey from 'misskey-js';
+import { onUpdated, ref, useTemplateRef } from 'vue';
+import { getScrollContainer } from '@@/js/scroll.js';
+import XNote from '@/pages/welcome.timeline.note.vue';
+import { misskeyApiGet } from '@/utility/misskey-api.js';
 
-export default defineComponent({
-	components: {
-		MkReactionsViewer,
-		MkMediaList,
-		MkPoll,
-	},
+const notes = ref<Misskey.entities.Note[]>([]);
+const isScrolling = ref(false);
+const scrollState = ref<null | 'intro' | 'loop'>(null);
+const notesMainContainerEl = useTemplateRef('notesMainContainerEl');
 
-	data() {
-		return {
-			notes: [],
-			isScrolling: false,
-		};
-	},
-
-	created() {
-		os.api('notes/featured').then(notes => {
-			this.notes = notes;
-		});
-	},
-
-	updated() {
-		if (this.$refs.scroll.clientHeight > window.innerHeight) {
-			this.isScrolling = true;
-		}
-	},
+misskeyApiGet('notes/featured').then(_notes => {
+	notes.value = _notes;
 });
-</script>
 
-<style lang="scss" scoped>
-@keyframes scroll {
-	0% {
-		transform: translate3d(0, 0, 0);
-	}
-	5% {
-		transform: translate3d(0, 0, 0);
-	}
-	75% {
-		transform: translate3d(0, calc(-100% + 90vh), 0);
-	}
-	90% {
-		transform: translate3d(0, calc(-100% + 90vh), 0);
+function changeScrollState() {
+	if (scrollState.value !== 'loop') {
+		scrollState.value = 'loop';
 	}
 }
 
-.civpbkhh {
-	text-align: right;
-
-	> .scrollbox {
-		&.scroll {
-			animation: scroll 45s linear infinite;
+onUpdated(() => {
+	if (!notesMainContainerEl.value) return;
+	const container = getScrollContainer(notesMainContainerEl.value);
+	const containerHeight = container ? container.clientHeight : window.innerHeight;
+	if (notesMainContainerEl.value.offsetHeight > containerHeight) {
+		if (scrollState.value === null) {
+			scrollState.value = 'intro';
 		}
-
-		> .note {
-			margin: 16px 0 16px auto;
-
-			> .content {
-				padding: 16px;
-				margin: 0 0 0 auto;
-				max-width: max-content;
-				border-radius: 16px;
-
-				> .richcontent {
-					min-width: 250px;
-				}
-			}
-		}
+		isScrolling.value = true;
 	}
+});
+</script>
+
+<style lang="scss" module>
+@keyframes scrollIntro {
+	0% {
+		transform: translate3d(0, 0, 0);
+	}
+	100% {
+		transform: translate3d(0, calc(calc(-100% - 128px) - var(--MI-margin)), 0);
+	}
+}
+
+@keyframes scrollConstant {
+	0% {
+		transform: translate3d(0, -128px, 0);
+	}
+	100% {
+		transform: translate3d(0, calc(calc(-100% - 128px) - var(--MI-margin)), 0);
+	}
+}
+
+.root {
+	text-align: right;
+}
+
+.scrollBoxMain {
+	&.scrollIntro {
+		animation: scrollIntro 30s linear forwards;
+	}
+	&.scrollLoop {
+		animation: scrollConstant 30s linear infinite;
+	}
+}
+
+.scrollBoxSub {
+	&.scrollIntro {
+		animation: scrollIntro 30s linear forwards;
+	}
+	&.scrollLoop {
+		animation: scrollConstant 30s linear infinite;
+	}
+}
+
+.root:has(.note:hover) .scrollBoxMain,
+.root:has(.note:hover) .scrollBoxSub {
+	animation-play-state: paused;
 }
 </style>

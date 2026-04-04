@@ -39,10 +39,8 @@ remove: "Kkes"
 connectService: "Qqen"
 userList: "Tibdarin"
 securityKey: "Tasarutt n tɣellist"
-securityKeyName: "Isem n tsarutt"
 signinRequired: "Ttxil jerred"
 signinWith: "Tuqqna s {x}"
-tapSecurityKey: "Sekcem tasarutt-ik·im n tɣellist"
 uiLanguage: "Tutlayt n wegrudem"
 accountSettings: "Iɣewwaṛen n umiḍan"
 plugins: "Izegrar"
@@ -58,13 +56,10 @@ accounts: "Imiḍan"
 searchByGoogle: "Nadi"
 file: "Ifuyla"
 account: "Imiḍan"
+replies: "Err"
 _email:
   _follow:
     title: "Yeṭṭafaṛ-ik·em-id"
-_mfm:
-  mention: "Bder"
-  search: "Nadi"
-  font: "Tasefsit"
 _theme:
   keys:
     mention: "Bder"
@@ -109,3 +104,7 @@ _deck:
   _columns:
     notifications: "Ilɣuyen"
     list: "Tibdarin"
+_abuseReport:
+  _notificationRecipient:
+    _recipientType:
+      mail: "Imayl"

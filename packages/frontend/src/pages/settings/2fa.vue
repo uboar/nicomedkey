@@ -1,216 +1,238 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<div>
-	<MkButton v-if="!twoFactorData && !$i.twoFactorEnabled" @click="register">{{ i18n.ts._2fa.registerDevice }}</MkButton>
-	<template v-if="$i.twoFactorEnabled">
-		<p>{{ i18n.ts._2fa.alreadyRegistered }}</p>
-		<MkButton @click="unregister">{{ i18n.ts.unregister }}</MkButton>
+<SearchMarker markerId="2fa" :keywords="['2fa']">
+	<FormSection :first="first">
+		<template #label><SearchLabel>{{ i18n.ts['2fa'] }}</SearchLabel></template>
 
-		<template v-if="supportsCredentials">
-			<hr class="totp-method-sep">
+		<div v-if="$i" class="_gaps_s">
+			<MkInfo v-if="$i.twoFactorEnabled && $i.twoFactorBackupCodesStock === 'partial'" warn>
+				{{ i18n.ts._2fa.backupCodeUsedWarning }}
+			</MkInfo>
+			<MkInfo v-if="$i.twoFactorEnabled && $i.twoFactorBackupCodesStock === 'none'" warn>
+				{{ i18n.ts._2fa.backupCodesExhaustedWarning }}
+			</MkInfo>
 
-			<h2 class="heading">{{ i18n.ts.securityKey }}</h2>
-			<p>{{ i18n.ts._2fa.securityKeyInfo }}</p>
-			<div class="key-list">
-				<div v-for="key in $i.securityKeysList" class="key">
-					<h3>{{ key.name }}</h3>
-					<div class="last-used">{{ i18n.ts.lastUsed }}<MkTime :time="key.lastUsed"/></div>
-					<MkButton @click="unregisterKey(key)">{{ i18n.ts.unregister }}</MkButton>
-				</div>
-			</div>
+			<SearchMarker :keywords="['totp', 'app']">
+				<MkFolder :defaultOpen="true">
+					<template #icon><i class="ti ti-shield-lock"></i></template>
+					<template #label><SearchLabel>{{ i18n.ts.totp }}</SearchLabel></template>
+					<template #caption><SearchKeyword>{{ i18n.ts.totpDescription }}</SearchKeyword></template>
+					<template #suffix><i v-if="$i.twoFactorEnabled" class="ti ti-check" style="color: var(--MI_THEME-success)"></i></template>
 
-			<MkSwitch v-if="$i.securityKeysList.length > 0" v-model="usePasswordLessLogin" @update:model-value="updatePasswordLessLogin">{{ i18n.ts.passwordLessLogin }}</MkSwitch>
+					<div v-if="$i.twoFactorEnabled" class="_gaps_s">
+						<div v-text="i18n.ts._2fa.alreadyRegistered"/>
+						<template v-if="$i.securityKeysList.length > 0">
+							<MkButton @click="renewTOTP">{{ i18n.ts._2fa.renewTOTP }}</MkButton>
+							<MkInfo>{{ i18n.ts._2fa.whyTOTPOnlyRenew }}</MkInfo>
+						</template>
+						<MkButton v-else danger @click="unregisterTOTP">{{ i18n.ts.unregister }}</MkButton>
+					</div>
 
-			<MkInfo v-if="registration && registration.error" warn>{{ i18n.ts.error }} {{ registration.error }}</MkInfo>
-			<MkButton v-if="!registration || registration.error" @click="addSecurityKey">{{ i18n.ts._2fa.registerKey }}</MkButton>
+					<div v-else-if="!$i.twoFactorEnabled" class="_gaps_s">
+						<MkButton primary gradate @click="registerTOTP">{{ i18n.ts._2fa.registerTOTP }}</MkButton>
+						<MkLink url="https://misskey-hub.net/docs/for-users/stepped-guides/how-to-enable-2fa/" target="_blank"><i class="ti ti-help-circle"></i> {{ i18n.ts.learnMore }}</MkLink>
+					</div>
+				</MkFolder>
+			</SearchMarker>
 
-			<ol v-if="registration && !registration.error">
-				<li v-if="registration.stage >= 0">
-					{{ i18n.ts.tapSecurityKey }}
-					<MkLoading v-if="registration.saving && registration.stage == 0" :em="true"/>
-				</li>
-				<li v-if="registration.stage >= 1">
-					<MkForm :disabled="registration.stage != 1 || registration.saving">
-						<MkInput v-model="keyName" :max="30">
-							<template #label>{{ i18n.ts.securityKeyName }}</template>
-						</MkInput>
-						<MkButton :disabled="keyName.length == 0" @click="registerKey">{{ i18n.ts.registerSecurityKey }}</MkButton>
-						<MkLoading v-if="registration.saving && registration.stage == 1" :em="true"/>
-					</MkForm>
-				</li>
-			</ol>
-		</template>
-	</template>
-	<div v-if="twoFactorData && !$i.twoFactorEnabled">
-		<ol style="margin: 0; padding: 0 0 0 1em;">
-			<li>
-				<I18n :src="i18n.ts._2fa.step1" tag="span">
-					<template #a>
-						<a href="https://authy.com/" rel="noopener" target="_blank" class="_link">Authy</a>
-					</template>
-					<template #b>
-						<a href="https://support.google.com/accounts/answer/1066447" rel="noopener" target="_blank" class="_link">Google Authenticator</a>
-					</template>
-				</I18n>
-			</li>
-			<li>{{ i18n.ts._2fa.step2 }}<br><img :src="twoFactorData.qr"><p>{{ $ts._2fa.step2Url }}<br>{{ twoFactorData.url }}</p></li>
-			<li>
-				{{ i18n.ts._2fa.step3 }}<br>
-				<MkInput v-model="token" type="text" pattern="^[0-9]{6}$" autocomplete="off" :spellcheck="false"><template #label>{{ i18n.ts.token }}</template></MkInput>
-				<MkButton primary @click="submit">{{ i18n.ts.done }}</MkButton>
-			</li>
-		</ol>
-		<MkInfo>{{ i18n.ts._2fa.step4 }}</MkInfo>
-	</div>
-</div>
+			<SearchMarker :keywords="['security', 'key', 'passkey']">
+				<MkFolder>
+					<template #icon><i class="ti ti-key"></i></template>
+					<template #label><SearchLabel>{{ i18n.ts.securityKeyAndPasskey }}</SearchLabel></template>
+					<div class="_gaps_s">
+						<MkInfo>
+							{{ i18n.ts._2fa.securityKeyInfo }}
+						</MkInfo>
+
+						<MkInfo v-if="!webAuthnSupported()" warn>
+							{{ i18n.ts._2fa.securityKeyNotSupported }}
+						</MkInfo>
+
+						<MkInfo v-else-if="webAuthnSupported() && !$i.twoFactorEnabled" warn>
+							{{ i18n.ts._2fa.registerTOTPBeforeKey }}
+						</MkInfo>
+
+						<template v-else>
+							<MkButton primary @click="addSecurityKey">{{ i18n.ts._2fa.registerSecurityKey }}</MkButton>
+							<MkFolder v-for="key in $i.securityKeysList" :key="key.id">
+								<template #label>{{ key.name }}</template>
+								<template #suffix><I18n :src="i18n.ts.lastUsedAt"><template #t><MkTime :time="key.lastUsed"/></template></I18n></template>
+								<div class="_buttons">
+									<MkButton @click="renameKey(key)"><i class="ti ti-forms"></i> {{ i18n.ts.rename }}</MkButton>
+									<MkButton danger @click="unregisterKey(key)"><i class="ti ti-trash"></i> {{ i18n.ts.unregister }}</MkButton>
+								</div>
+							</MkFolder>
+						</template>
+					</div>
+				</MkFolder>
+			</SearchMarker>
+
+			<SearchMarker :keywords="['password', 'less', 'key', 'passkey', 'login', 'signin']">
+				<MkSwitch :disabled="!$i.twoFactorEnabled || $i.securityKeysList.length === 0" :modelValue="usePasswordLessLogin" @update:modelValue="v => updatePasswordLessLogin(v)">
+					<template #label><SearchLabel>{{ i18n.ts.passwordLessLogin }}</SearchLabel></template>
+					<template #caption><SearchKeyword>{{ i18n.ts.passwordLessLoginDescription }}</SearchKeyword></template>
+				</MkSwitch>
+			</SearchMarker>
+		</div>
+	</FormSection>
+</SearchMarker>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { hostname } from '@/config';
-import { byteify, hexify, stringify } from '@/scripts/2fa';
+import { defineAsyncComponent, computed } from 'vue';
+import { supported as webAuthnSupported, create as webAuthnCreate, parseCreationOptionsFromJSON } from '@github/webauthn-json/browser-ponyfill';
 import MkButton from '@/components/MkButton.vue';
 import MkInfo from '@/components/MkInfo.vue';
-import MkInput from '@/components/MkInput.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
-import * as os from '@/os';
-import { $i } from '@/account';
-import { i18n } from '@/i18n';
+import FormSection from '@/components/form/section.vue';
+import MkFolder from '@/components/MkFolder.vue';
+import MkLink from '@/components/MkLink.vue';
+import * as os from '@/os.js';
+import { ensureSignin } from '@/i.js';
+import { i18n } from '@/i18n.js';
+import { updateCurrentAccountPartial } from '@/accounts.js';
 
-const twoFactorData = ref<any>(null);
-const supportsCredentials = ref(!!navigator.credentials);
-const usePasswordLessLogin = ref($i!.usePasswordLessLogin);
-const registration = ref<any>(null);
-const keyName = ref('');
-const token = ref(null);
+const $i = ensureSignin();
 
-function register() {
-	os.inputText({
-		title: i18n.ts.password,
-		type: 'password',
-	}).then(({ canceled, result: password }) => {
-		if (canceled) return;
-		os.api('i/2fa/register', {
-			password: password,
-		}).then(data => {
-			twoFactorData.value = data;
-		});
+// メモ: 各エンドポイントはmeUpdatedを発行するため、refreshAccountは不要
+
+withDefaults(defineProps<{
+	first?: boolean;
+}>(), {
+	first: false,
+});
+
+const usePasswordLessLogin = computed(() => $i.usePasswordLessLogin ?? false);
+
+async function registerTOTP(): Promise<void> {
+	const auth = await os.authenticateDialog();
+	if (auth.canceled) return;
+
+	const twoFactorData = await os.apiWithDialog('i/2fa/register', {
+		password: auth.result.password,
+		token: auth.result.token,
+	});
+
+	const { dispose } = os.popup(defineAsyncComponent(() => import('./2fa.qrdialog.vue')), {
+		twoFactorData,
+	}, {
+		closed: () => dispose(),
 	});
 }
 
-function unregister() {
-	os.inputText({
-		title: i18n.ts.password,
-		type: 'password',
-	}).then(({ canceled, result: password }) => {
-		if (canceled) return;
-		os.api('i/2fa/unregister', {
-			password: password,
-		}).then(() => {
-			usePasswordLessLogin.value = false;
-			updatePasswordLessLogin();
-		}).then(() => {
-			os.success();
-			$i!.twoFactorEnabled = false;
-		});
-	});
-}
+async function unregisterTOTP(): Promise<void> {
+	const auth = await os.authenticateDialog();
+	if (auth.canceled) return;
 
-function submit() {
-	os.api('i/2fa/done', {
-		token: token.value,
-	}).then(() => {
-		os.success();
-		$i!.twoFactorEnabled = true;
-	}).catch(err => {
+	os.apiWithDialog('i/2fa/unregister', {
+		password: auth.result.password,
+		token: auth.result.token,
+	}).then(res => {
+		updateCurrentAccountPartial({
+			twoFactorEnabled: false,
+		});
+	}).catch(error => {
 		os.alert({
 			type: 'error',
-			text: err,
+			text: error,
 		});
 	});
 }
 
-function registerKey() {
-	registration.value.saving = true;
-	os.api('i/2fa/key-done', {
-		password: registration.value.password,
-		name: keyName.value,
-		challengeId: registration.value.challengeId,
-		// we convert each 16 bits to a string to serialise
-		clientDataJSON: stringify(registration.value.credential.response.clientDataJSON),
-		attestationObject: hexify(registration.value.credential.response.attestationObject),
-	}).then(key => {
-		registration.value = null;
-		key.lastUsed = new Date();
-		os.success();
-	});
-}
-
-function unregisterKey(key) {
-	os.inputText({
-		title: i18n.ts.password,
-		type: 'password',
-	}).then(({ canceled, result: password }) => {
+function renewTOTP(): void {
+	os.confirm({
+		type: 'question',
+		title: i18n.ts._2fa.renewTOTP,
+		text: i18n.ts._2fa.renewTOTPConfirm,
+		okText: i18n.ts._2fa.renewTOTPOk,
+		cancelText: i18n.ts._2fa.renewTOTPCancel,
+	}).then(({ canceled }) => {
 		if (canceled) return;
-		return os.api('i/2fa/remove-key', {
-			password,
-			credentialId: key.id,
-		}).then(() => {
-			usePasswordLessLogin.value = false;
-			updatePasswordLessLogin();
-		}).then(() => {
-			os.success();
-		});
+		registerTOTP();
 	});
 }
 
-function addSecurityKey() {
-	os.inputText({
-		title: i18n.ts.password,
-		type: 'password',
-	}).then(({ canceled, result: password }) => {
-		if (canceled) return;
-		os.api('i/2fa/register-key', {
-			password,
-		}).then(reg => {
-			registration.value = {
-				password,
-				challengeId: reg!.challengeId,
-				stage: 0,
-				publicKeyOptions: {
-					challenge: byteify(reg!.challenge, 'base64'),
-					rp: {
-						id: hostname,
-						name: 'Misskey',
-					},
-					user: {
-						id: byteify($i!.id, 'ascii'),
-						name: $i!.username,
-						displayName: $i!.name,
-					},
-					pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-					timeout: 60000,
-					attestation: 'direct',
-				},
-				saving: true,
-			};
-			return navigator.credentials.create({
-				publicKey: registration.value.publicKeyOptions,
-			});
-		}).then(credential => {
-			registration.value.credential = credential;
-			registration.value.saving = false;
-			registration.value.stage = 1;
-		}).catch(err => {
-			console.warn('Error while registering?', err);
-			registration.value.error = err.message;
-			registration.value.stage = -1;
-		});
+async function unregisterKey(key) {
+	const confirm = await os.confirm({
+		type: 'question',
+		title: i18n.ts._2fa.removeKey,
+		text: i18n.tsx._2fa.removeKeyConfirm({ name: key.name }),
+	});
+	if (confirm.canceled) return;
+
+	const auth = await os.authenticateDialog();
+	if (auth.canceled) return;
+
+	await os.apiWithDialog('i/2fa/remove-key', {
+		password: auth.result.password,
+		token: auth.result.token,
+		credentialId: key.id,
+	});
+	os.success();
+}
+
+async function renameKey(key) {
+	const name = await os.inputText({
+		title: i18n.ts.rename,
+		default: key.name,
+		type: 'text',
+		minLength: 1,
+		maxLength: 30,
+	});
+	if (name.canceled) return;
+
+	await os.apiWithDialog('i/2fa/update-key', {
+		name: name.result,
+		credentialId: key.id,
 	});
 }
 
-async function updatePasswordLessLogin() {
-	await os.api('i/2fa/password-less', {
-		value: !!usePasswordLessLogin.value,
+async function addSecurityKey() {
+	const auth = await os.authenticateDialog();
+	if (auth.canceled) return;
+
+	const registrationOptions = parseCreationOptionsFromJSON({
+		publicKey: await os.apiWithDialog('i/2fa/register-key', {
+			password: auth.result.password,
+			token: auth.result.token,
+		}),
+	});
+
+	const name = await os.inputText({
+		title: i18n.ts._2fa.registerSecurityKey,
+		text: i18n.ts._2fa.securityKeyName,
+		type: 'text',
+		minLength: 1,
+		maxLength: 30,
+	});
+	if (name.canceled) return;
+
+	const credential = await os.promiseDialog(
+		webAuthnCreate(registrationOptions),
+		null,
+		() => {}, // ユーザーのキャンセルはrejectなのでエラーダイアログを出さない
+		i18n.ts._2fa.tapSecurityKey,
+	);
+	if (!credential) return;
+
+	const auth2 = await os.authenticateDialog();
+	if (auth2.canceled) return;
+
+	await os.apiWithDialog('i/2fa/key-done', {
+		password: auth.result.password,
+		token: auth.result.token,
+		name: name.result,
+		credential: credential.toJSON(),
+	});
+}
+
+async function updatePasswordLessLogin(value: boolean) {
+	await os.apiWithDialog('i/2fa/password-less', {
+		value,
 	});
 }
 </script>

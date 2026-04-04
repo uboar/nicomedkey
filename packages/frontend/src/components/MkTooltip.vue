@@ -1,24 +1,33 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <Transition
-	:enter-active-class="$store.state.animation ? $style.transition_tooltip_enterActive : ''"
-	:leave-active-class="$store.state.animation ? $style.transition_tooltip_leaveActive : ''"
-	:enter-from-class="$store.state.animation ? $style.transition_tooltip_enterFrom : ''"
-	:leave-to-class="$store.state.animation ? $style.transition_tooltip_leaveTo : ''"
-	appear @after-leave="emit('closed')"
+	:enterActiveClass="prefer.s.animation ? $style.transition_tooltip_enterActive : ''"
+	:leaveActiveClass="prefer.s.animation ? $style.transition_tooltip_leaveActive : ''"
+	:enterFromClass="prefer.s.animation ? $style.transition_tooltip_enterFrom : ''"
+	:leaveToClass="prefer.s.animation ? $style.transition_tooltip_leaveTo : ''"
+	appear :css="prefer.s.animation"
+	@afterLeave="emit('closed')"
 >
 	<div v-show="showing" ref="el" :class="$style.root" class="_acrylic _shadow" :style="{ zIndex, maxWidth: maxWidth + 'px' }">
 		<slot>
-			<Mfm v-if="asMfm" :text="text"/>
-			<span v-else>{{ text }}</span>
+			<template v-if="text">
+				<Mfm v-if="asMfm" :text="text"/>
+				<span v-else>{{ text }}</span>
+			</template>
 		</slot>
 	</div>
 </Transition>
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import * as os from '@/os';
-import { calcPopupPosition } from '@/scripts/popup-position';
+import { nextTick, onMounted, onUnmounted, useTemplateRef } from 'vue';
+import * as os from '@/os.js';
+import { calcPopupPosition } from '@/utility/popup-position.js';
+import { prefer } from '@/preferences.js';
 
 const props = withDefaults(defineProps<{
 	showing: boolean;
@@ -40,10 +49,14 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const el = shallowRef<HTMLElement>();
+// タイミングによっては最初から showing = false な場合があり、その場合に closed 扱いにしないと永久にDOMに残ることになる
+if (!props.showing) emit('closed');
+
+const el = useTemplateRef('el');
 const zIndex = os.claimZIndex('high');
 
 function setPosition() {
+	if (el.value == null) return;
 	const data = calcPopupPosition(el.value, {
 		anchorElement: props.targetElement,
 		direction: props.direction,
@@ -65,10 +78,8 @@ onMounted(() => {
 		setPosition();
 
 		const loop = () => {
-			loopHandler = window.requestAnimationFrame(() => {
-				setPosition();
-				loop();
-			});
+			setPosition();
+			loopHandler = window.requestAnimationFrame(loop);
 		};
 
 		loop();
@@ -100,7 +111,7 @@ onUnmounted(() => {
 	box-sizing: border-box;
 	text-align: center;
 	border-radius: 4px;
-	border: solid 0.5px var(--divider);
+	border: solid 0.5px var(--MI_THEME-divider);
 	pointer-events: none;
 	transform-origin: center center;
 }

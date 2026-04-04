@@ -1,41 +1,53 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div ref="content" :class="[$style.content, { [$style.omitted]: omitted }]">
 	<slot></slot>
 	<button v-if="omitted" :class="$style.fade" class="_button" @click="() => { ignoreOmit = true; omitted = false; }">
-		<span :class="$style.fadeLabel">{{ $ts.showMore }}</span>
+		<span :class="$style.fadeLabel">{{ i18n.ts.showMore }}</span>
 	</button>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted } from 'vue';
+import { onMounted, onUnmounted, useTemplateRef, ref } from 'vue';
+import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<{
-	maxHeight: number;
+	maxHeight?: number;
 }>(), {
 	maxHeight: 200,
 });
 
-let content = $ref<HTMLElement>();
-let omitted = $ref(false);
-let ignoreOmit = $ref(false);
+const content = useTemplateRef('content');
+const omitted = ref(false);
+const ignoreOmit = ref(false);
+
+const calcOmit = () => {
+	if (omitted.value || ignoreOmit.value || content.value == null) return;
+	omitted.value = content.value.offsetHeight > props.maxHeight;
+};
+
+const omitObserver = new ResizeObserver((entries, observer) => {
+	calcOmit();
+});
 
 onMounted(() => {
-	const calcOmit = () => {
-		if (omitted || ignoreOmit) return;
-		omitted = content.offsetHeight > props.maxHeight;
-	};
-
 	calcOmit();
-	new ResizeObserver((entries, observer) => {
-		calcOmit();
-	}).observe(content);
+	omitObserver.observe(content.value as HTMLElement);
+});
+
+onUnmounted(() => {
+	omitObserver.disconnect();
 });
 </script>
 
 <style lang="scss" module>
 .content {
-	--stickyTop: 0px;
+	--MI-stickyTop: 0px;
 
 	&.omitted {
 		position: relative;
@@ -50,11 +62,11 @@ onMounted(() => {
 			left: 0;
 			width: 100%;
 			height: 64px;
-			background: linear-gradient(0deg, var(--panel), var(--X15));
+			background: linear-gradient(0deg, var(--MI_THEME-panel), color(from var(--MI_THEME-panel) srgb r g b / 0));
 
 			> .fadeLabel {
 				display: inline-block;
-				background: var(--panel);
+				background: var(--MI_THEME-panel);
 				padding: 6px 10px;
 				font-size: 0.8em;
 				border-radius: 999px;
@@ -63,7 +75,7 @@ onMounted(() => {
 
 			&:hover {
 				> .fadeLabel {
-					background: var(--panelHighlight);
+					background: var(--MI_THEME-panelHighlight);
 				}
 			}
 		}

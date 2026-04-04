@@ -1,4 +1,9 @@
-import { Directive } from 'vue';
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { Directive } from 'vue';
 
 export default {
 	beforeMount(src, binding, vn) {

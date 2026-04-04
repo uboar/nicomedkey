@@ -1,17 +1,24 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
-<MkModal ref="modal" v-slot="{ type, maxHeight }" :prefer-type="preferedModalType" :anchor="anchor" :transparent-bg="true" :src="src" @click="modal.close()" @closed="emit('closed')">
+<MkModal ref="modal" v-slot="{ type, maxHeight }" :preferType="preferedModalType" :anchor="anchor" :transparentBg="true" :src="src" @click="modal?.close()" @closed="emit('closed')" @esc="modal?.close()">
 	<div class="szkkfdyq _popup _shadow" :class="{ asDrawer: type === 'drawer' }" :style="{ maxHeight: maxHeight ? maxHeight + 'px' : '' }">
 		<div class="main">
-			<template v-for="item in items">
+			<template v-for="item in items" :key="item.text">
 				<button v-if="item.action" v-click-anime class="_button item" @click="$event => { item.action($event); close(); }">
 					<i class="icon" :class="item.icon"></i>
 					<div class="text">{{ item.text }}</div>
-					<span v-if="item.indicate" class="indicator"><i class="_indicatorCircle"></i></span>
+					<span v-if="item.indicate && item.indicateValue" class="_indicateCounter indicatorWithValue">{{ item.indicateValue }}</span>
+					<span v-else-if="item.indicate" class="indicator _blink"><i class="_indicatorCircle"></i></span>
 				</button>
 				<MkA v-else v-click-anime :to="item.to" class="item" @click.passive="close()">
 					<i class="icon" :class="item.icon"></i>
 					<div class="text">{{ item.text }}</div>
-					<span v-if="item.indicate" class="indicator"><i class="_indicatorCircle"></i></span>
+					<span v-if="item.indicate && item.indicateValue" class="_indicateCounter indicatorWithValue">{{ item.indicateValue }}</span>
+					<span v-else-if="item.indicate" class="indicator _blink"><i class="_indicatorCircle"></i></span>
 				</MkA>
 			</template>
 		</div>
@@ -20,14 +27,11 @@
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
+import { useTemplateRef } from 'vue';
 import MkModal from '@/components/MkModal.vue';
-import { navbarItemDef } from '@/navbar';
-import { instanceName } from '@/config';
-import { defaultStore } from '@/store';
-import { i18n } from '@/i18n';
-import { deviceKind } from '@/scripts/device-kind';
-import * as os from '@/os';
+import { navbarItemDef } from '@/navbar.js';
+import { deviceKind } from '@/utility/device-kind.js';
+import { prefer } from '@/preferences.js';
 
 const props = withDefaults(defineProps<{
 	src?: HTMLElement;
@@ -44,9 +48,9 @@ const preferedModalType = (deviceKind === 'desktop' && props.src != null) ? 'pop
 	deviceKind === 'smartphone' ? 'drawer' :
 	'dialog';
 
-const modal = $shallowRef<InstanceType<typeof MkModal>>();
+const modal = useTemplateRef('modal');
 
-const menu = defaultStore.state.menu;
+const menu = prefer.s.menu;
 
 const items = Object.keys(navbarItemDef).filter(k => !menu.includes(k)).map(k => navbarItemDef[k]).filter(def => def.show == null ? true : def.show).map(def => ({
 	type: def.to ? 'link' : 'button',
@@ -55,10 +59,11 @@ const items = Object.keys(navbarItemDef).filter(k => !menu.includes(k)).map(k =>
 	to: def.to,
 	action: def.action,
 	indicate: def.indicated,
+	indicateValue: def.indicateValue,
 }));
 
 function close() {
-	modal.close();
+	modal.value?.close();
 }
 </script>
 
@@ -96,10 +101,12 @@ function close() {
 			vertical-align: bottom;
 			height: 100px;
 			border-radius: 10px;
+			padding: 10px;
+			box-sizing: border-box;
 
 			&:hover {
-				color: var(--accent);
-				background: var(--accentedBg);
+				color: var(--MI_THEME-accent);
+				background: var(--MI_THEME-accentedBg);
 				text-decoration: none;
 			}
 
@@ -112,15 +119,26 @@ function close() {
 				margin-top: 12px;
 				font-size: 0.8em;
 				line-height: 1.5em;
+				text-align: center;
+			}
+
+			> .indicatorWithValue {
+				position: absolute;
+				top: 32px;
+				left: 16px;
+
+				@media (max-width: 500px) {
+					top: 16px;
+					left: 8px;
+				}
 			}
 
 			> .indicator {
 				position: absolute;
 				top: 32px;
 				left: 32px;
-				color: var(--indicator);
+				color: var(--MI_THEME-indicator);
 				font-size: 8px;
-				animation: blink 1s infinite;
 
 				@media (max-width: 500px) {
 					top: 16px;

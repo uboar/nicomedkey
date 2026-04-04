@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
 <template>
 <div class="_gaps_m">
 	<MkSelect v-model="selectedThemeId">
@@ -10,13 +15,13 @@
 		</optgroup>
 	</MkSelect>
 	<template v-if="selectedTheme">
-		<MkInput readonly :model-value="selectedTheme.author">
+		<MkInput readonly :modelValue="selectedTheme.author">
 			<template #label>{{ i18n.ts.author }}</template>
 		</MkInput>
-		<MkTextarea v-if="selectedTheme.desc" readonly :model-value="selectedTheme.desc">
+		<MkTextarea v-if="selectedTheme.desc" readonly :modelValue="selectedTheme.desc">
 			<template #label>{{ i18n.ts._theme.description }}</template>
 		</MkTextarea>
-		<MkTextarea readonly tall :model-value="selectedThemeCode">
+		<MkTextarea readonly tall :modelValue="selectedThemeCode">
 			<template #label>{{ i18n.ts._theme.code }}</template>
 			<template #caption><button class="_textButton" @click="copyThemeCode()">{{ i18n.ts.copy }}</button></template>
 		</MkTextarea>
@@ -28,20 +33,20 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import JSON5 from 'json5';
+import type { Theme } from '@/theme.js';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkButton from '@/components/MkButton.vue';
-import { Theme, getBuiltinThemesRef } from '@/scripts/theme';
-import copyToClipboard from '@/scripts/copy-to-clipboard';
-import * as os from '@/os';
-import { getThemes, removeTheme } from '@/theme-store';
-import { i18n } from '@/i18n';
-import { definePageMetadata } from '@/scripts/page-metadata';
+import { getBuiltinThemesRef, getThemesRef, removeTheme } from '@/theme.js';
+import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import * as os from '@/os.js';
+import { i18n } from '@/i18n.js';
+import { definePage } from '@/page.js';
 
-const installedThemes = ref(getThemes());
+const installedThemes = getThemesRef();
 const builtinThemes = getBuiltinThemesRef();
-const selectedThemeId = ref(null);
+const selectedThemeId = ref<string | null>(null);
 
 const themes = computed(() => [...installedThemes.value, ...builtinThemes.value]);
 
@@ -57,7 +62,6 @@ const selectedThemeCode = computed(() => {
 
 function copyThemeCode() {
 	copyToClipboard(selectedThemeCode.value);
-	os.success();
 }
 
 function uninstall() {
@@ -67,12 +71,12 @@ function uninstall() {
 	os.success();
 }
 
-const headerActions = $computed(() => []);
+const headerActions = computed(() => []);
 
-const headerTabs = $computed(() => []);
+const headerTabs = computed(() => []);
 
-definePageMetadata({
+definePage(() => ({
 	title: i18n.ts._theme.manage,
 	icon: 'ti ti-tool',
-});
+}));
 </script>
