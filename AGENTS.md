@@ -1,11 +1,10 @@
 # AGENTS.md
 
-このリポジトリは Misskey upstream tag `2026.3.2` をベースにした fork です。
-merge-base は `b97683cdb2315daf6f01c423809c872fd4be7948`、作成時点の HEAD は `6e61072de3` です。
+fork側で差分を追加した場合はAGENTS.mdに記載すること。
 
 ## original Misskey との差分メモ
 
-- バージョンと repository は `2026.3.2-nicomedkey` / `uboar/nicomedkey` に変更されています。
+- バージョンと repository は `2026.5.1-nicomedkey` / `uboar/nicomedkey` に変更されています。
 - Docker publish workflow は `nicomedkey/nicomedkey` への publish と、`main` push / package version tagging に合わせています。
 - `misskeyBlockMentionsFromUnfamiliarRemoteUsers` 設定で、未知の remote user からの通知発生投稿を抑止できます。
 - visitor / nav / splash / widget UI には nicomedkey logo、branding、fork GitHub URL が入っています。
