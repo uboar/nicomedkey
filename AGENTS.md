@@ -4,7 +4,7 @@ fork側で差分を追加した場合はAGENTS.mdに記載すること。
 
 ## original Misskey との差分メモ
 
-- バージョンと repository は `2026.5.1-nicomedkey` / `uboar/nicomedkey` に変更されています。
+- バージョンと repository は `2026.5.4-nicomedkey` / `uboar/nicomedkey` に変更されています。
 - Docker publish workflow は `nicomedkey/nicomedkey` への publish と、`main` push / package version tagging に合わせています。
 - `misskeyBlockMentionsFromUnfamiliarRemoteUsers` 設定で、未知の remote user からの通知発生投稿を抑止できます。
 - visitor / nav / splash / widget UI には nicomedkey logo、branding、fork GitHub URL が入っています。
