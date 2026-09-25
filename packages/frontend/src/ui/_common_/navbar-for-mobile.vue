@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</MkA>
 		<template v-for="item in prefer.r.menu.value">
 			<div v-if="item === '-'" :class="$style.divider"></div>
-			<component :is="navbarItemDef[item].to ? 'MkA' : 'button'" v-else-if="navbarItemDef[item] && (navbarItemDef[item].show !== false)" class="_button" :class="[$style.item, { [$style.active]: navbarItemDef[item].active }]" :activeClass="$style.active" :to="navbarItemDef[item].to" v-on="navbarItemDef[item].action ? { click: navbarItemDef[item].action } : {}">
+			<component :is="navbarItemDef[item].to ? 'MkA' : 'button'" v-else-if="navbarItemDef[item] && (navbarItemDef[item].show == null || navbarItemDef[item].show.value !== false)" class="_button" :class="$style.item" :activeClass="$style.active" :to="navbarItemDef[item].to" v-on="navbarItemDef[item].action ? { click: navbarItemDef[item].action } : {}">
 				<i class="ti-fw" :class="[$style.itemIcon, navbarItemDef[item].icon]"></i><span :class="$style.itemText">{{ navbarItemDef[item].title }}</span>
 				<span v-if="navbarItemDef[item].indicated" :class="$style.itemIndicator" class="_blink">
 					<span v-if="navbarItemDef[item].indicateValue" class="_indicateCounter" :class="$style.itemIndicateValueIcon">{{ navbarItemDef[item].indicateValue }}</span>
@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</component>
 		</template>
 		<div :class="$style.divider"></div>
-		<MkA v-if="$i.isAdmin || $i.isModerator" :class="$style.item" :activeClass="$style.active" to="/admin">
+		<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" :class="$style.item" :activeClass="$style.active" to="/admin">
 			<i :class="$style.itemIcon" class="ti ti-dashboard ti-fw"></i><span :class="$style.itemText">{{ i18n.ts.controlPanel }}</span>
 		</MkA>
 		<button :class="$style.item" class="_button" @click="more">
@@ -44,10 +44,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</MkA>
 	</div>
 	<div :class="$style.bottom">
-		<button class="_button" :class="$style.post" data-cy-open-post-form @click="os.post">
+		<button class="_button" :class="$style.post" data-cy-open-post-form @click="() => { os.post(); }">
 			<i :class="$style.postIcon" class="ti ti-pencil ti-fw"></i><span style="position: relative;">{{ i18n.ts.note }}</span>
 		</button>
-		<button class="_button" :class="$style.account" @click="openAccountMenu">
+		<button v-if="$i != null" class="_button" :class="$style.account" @click="openAccountMenu">
 			<MkAvatar :user="$i" :class="$style.avatar"/><MkAcct :class="$style.acct" class="_nowrap" :user="$i"/>
 		</button>
 	</div>
@@ -62,7 +62,7 @@ import { navbarItemDef } from '@/navbar.js';
 import { prefer } from '@/preferences.js';
 import { i18n } from '@/i18n.js';
 import { instance } from '@/instance.js';
-import { openAccountMenu as openAccountMenu_ } from '@/accounts.js';
+import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';
 
 const otherMenuItemIndicated = computed(() => {
@@ -73,10 +73,11 @@ const otherMenuItemIndicated = computed(() => {
 	return false;
 });
 
-function openAccountMenu(ev: MouseEvent) {
-	openAccountMenu_({
+async function openAccountMenu(ev: PointerEvent) {
+	const menuItems = await getAccountMenu({
 		withExtraOperation: true,
-	}, ev);
+	});
+	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
 
 function more() {
