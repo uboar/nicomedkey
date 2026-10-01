@@ -94,7 +94,7 @@
 
 fork 側で差分を追加した場合はこの節に記載すること。このファイル以外の既存編集は他作業者のものとして扱い、明示依頼なしに revert しないこと。
 
-- バージョンと repository は `2026.9.1-nicomedkey` / `uboar/nicomedkey` に変更されています。
+- バージョンと repository は `2026.10.0-nicomedkey` / `uboar/nicomedkey` に変更されています。
 - Docker publish workflow は `nicomedkey/nicomedkey` への publish と、`main` push / package version tagging に合わせています。
 - `misskeyBlockMentionsFromUnfamiliarRemoteUsers` 設定で、未知の remote user からの通知発生投稿を抑止できます。
 - visitor / nav / splash / widget UI には nicomedkey logo、branding、fork GitHub URL が入っています。
