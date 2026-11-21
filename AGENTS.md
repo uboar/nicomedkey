@@ -94,7 +94,7 @@
 
 fork 側で差分を追加した場合はこの節に記載すること。このファイル以外の既存編集は他作業者のものとして扱い、明示依頼なしに revert しないこと。
 
-- バージョンと repository は `2026.10.1-nicomedkey` / `uboar/nicomedkey` に変更されています。
+- バージョンと repository は `2026.11.0-nicomedkey` / `uboar/nicomedkey` に変更されています。
 - Docker publish workflow は `nicomedkey/nicomedkey` への publish と、`main` push / package version tagging に合わせています。
 - `misskeyBlockMentionsFromUnfamiliarRemoteUsers` 設定で、未知の remote user からの通知発生投稿を抑止できます。
 - visitor / nav / splash / widget UI には nicomedkey logo、branding、fork GitHub URL が入っています。
@@ -103,3 +103,6 @@ fork 側で差分を追加した場合はこの節に記載すること。この
 - upstream release 追従用に、local の `update-nicomedkey` / source-command workflow があります。
 - 2026.9.1 取り込み時、`packages/frontend/src/pages/about.vue` の欠落した `misskey-js` 型 import を補っています。
 - 2026.9.1 取り込み時、fork の nav UI の型・アカウントメニュー呼び出しを上流 API に合わせています。
+
+- 2026.11.0 取り込み時、visitor dashboard の logo と上流の chart 遅延読み込みを両立しています。
+- 2026.11.0 取り込み時、適用済み migration `1746949539915` は履歴改変を避けるため従来の内容を維持しています。上流の新規補正 migration は取り込んでいます。
